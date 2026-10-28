@@ -1,12 +1,12 @@
-Quero converter os requisitos em especificações verificáveis.
+I want to turn the requirements into verifiable specifications.
 
-- criar US relacionadas com o MVP (formato Como, quero, para)
-- Definir critérios de aceitação
-- Utilizar, sempre que adequado, o formato Given / When / Then.
-- Identificar situações excecionais e casos-limite
-- Rever resultados para eliminar ambiguidades
-- Os critérios de aceitação devem permitir verificar objetivamente se uma funcionalidade está corretamente implementada.
+- create user stories for the MVP (format: As a, I want, so that)
+- Define acceptance criteria
+- Use the Given / When / Then format whenever appropriate.
+- Identify exceptional situations and edge cases
+- Review the results to remove ambiguities
+- The acceptance criteria must make it possible to check objectively whether a feature is correctly implemented.
 
-Quero que agrupes as US numa pasta própria.
+I want the user stories grouped in their own folder.
 
-O objectivo é a criação do backlog inicial da aplicação, com USs claras, priorizadas e testáveis.
+The goal is to create the application's initial backlog, with clear, prioritised and testable user stories.

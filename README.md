@@ -1,13 +1,14 @@
 # Matriz
 
-Aplicação de gestão de projectos e tarefas, semelhante ao Jira mas muito simplificada. Permite a várias pessoas criar e gerir projectos e tarefas, actualizar o estado das tarefas e alocá-las a pessoas ou equipas.
+A project and task management application, similar to Jira but much simpler. It lets several people create and manage projects and tasks, update task statuses and assign tasks to people or teams.
 
-## Documentação
+## Documentation
 
-| Documento | Conteúdo |
+| Document | Contents |
 |---|---|
-| [docs/requisitos.md](docs/requisitos.md) | Requisitos (v1): actores, requisitos funcionais e não funcionais. |
-| [docs/requisitos-v2.md](docs/requisitos-v2.md) | Requisitos (v2): prioridades, justificações, âmbito do MVP e funcionalidades futuras. |
-| [docs/user-stories/](docs/user-stories/) | Backlog inicial do MVP: user stories com critérios de aceitação. |
-| [docs/prompts/](docs/prompts/) | Prompts usadas para gerar a documentação. |
-| [reports/](reports/) | Relatórios dos laboratórios. |
+| [docs/requirements.md](docs/requirements.md) | Requirements (v1, historical): actors, functional and non-functional requirements. |
+| [docs/requirements-v2.md](docs/requirements-v2.md) | Requirements (v2, current): priorities, justifications, MVP scope and future features. |
+| [docs/constraints.md](docs/constraints.md) | Constraints: scope limits, language and specification rules. |
+| [docs/user-stories/](docs/user-stories/) | Initial MVP backlog: user stories with acceptance criteria. |
+| [docs/prompts/](docs/prompts/) | Prompts used to produce the documentation. |
+| [reports/](reports/) | Lab reports. |
