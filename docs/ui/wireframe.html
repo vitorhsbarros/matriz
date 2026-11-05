@@ -1,0 +1,545 @@
+<title>Matriz Wireframe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a meta bar above a desktop browser frame; inside it, two greyscale screens of the Matriz MVP. */
+:root {
+  --paper: #f3f3f1;
+  --surface: #ffffff;
+  --ink: #1e1f20;
+  --muted: #66686b;
+  --line: #c4c5c7;
+  --fill: #e5e6e7;
+  --tag-bg: #2f3133;
+  --tag-fg: #f3f3f1;
+  --font-ui: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-note: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #141516; --surface: #1d1e20; --ink: #e8e8e6; --muted: #9c9ea1;
+    --line: #3f4144; --fill: #2a2c2e; --tag-bg: #d4d5d7; --tag-fg: #141516;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #141516; --surface: #1d1e20; --ink: #e8e8e6; --muted: #9c9ea1;
+  --line: #3f4144; --fill: #2a2c2e; --tag-bg: #d4d5d7; --tag-fg: #141516;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+  padding-block: 24px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 16px; }
+
+/* Meta bar: not part of the product, controls the wireframe */
+.meta {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  font-family: var(--font-note); font-size: 12px; color: var(--muted);
+}
+.meta h1 { margin: 0; font-family: var(--font-ui); font-size: 16px; font-weight: 600; color: var(--ink); }
+.meta .where { margin-top: 2px; }
+.switches { display: flex; flex-wrap: wrap; gap: 16px; }
+.switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--ink); }
+.switch input { accent-color: var(--ink); width: 16px; height: 16px; margin: 0; }
+
+/* Browser frame */
+.frame { border: 1.5px solid var(--ink); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.chrome {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  border-bottom: 1.5px solid var(--ink); background: var(--fill);
+}
+.dots { display: flex; gap: 6px; }
+.dots span { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--ink); }
+.url {
+  flex: 1; min-width: 0; font-family: var(--font-note); font-size: 12px; color: var(--muted);
+  border: 1px solid var(--line); background: var(--surface); border-radius: 4px; padding: 3px 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* App header */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 24px; border-bottom: 1px solid var(--line);
+}
+.brand { font-weight: 600; font-size: 16px; letter-spacing: 0.02em; }
+.user { display: flex; align-items: center; gap: 12px; color: var(--muted); }
+.avatar { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--ink); background: var(--fill); }
+
+.screen { padding: 24px; display: grid; gap: 20px; min-height: 420px; align-content: start; }
+.screen-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.screen-head h2 { margin: 0; font-size: 22px; font-weight: 600; text-wrap: balance; }
+.screen-head p { margin: 4px 0 0; color: var(--muted); }
+.title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.crumb { font-size: 13px; }
+.crumb a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.crumb a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, .row-link:focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 2px;
+}
+
+button {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1.5px solid var(--ink); border-radius: 4px; padding: 6px 14px; cursor: pointer;
+}
+button.primary { background: var(--ink); color: var(--surface); }
+button.quiet { border-color: var(--line); }
+
+.pill {
+  display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px;
+  border: 1px solid var(--ink); background: var(--fill);
+}
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; }
+table { width: 100%; border-collapse: collapse; min-width: 560px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; background: var(--fill); }
+tr:last-child td { border-bottom: 0; }
+td.date { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.row-link { cursor: pointer; }
+.row-link:hover td { background: var(--fill); }
+.row-link td:first-child { font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+select, input, textarea {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px;
+}
+select { min-width: 150px; }
+
+/* Empty state */
+.empty {
+  border: 1.5px dashed var(--line); border-radius: 6px; padding: 40px 24px;
+  display: grid; justify-items: center; gap: 14px; text-align: center; color: var(--muted);
+}
+.empty .box { width: 56px; height: 40px; border: 1.5px solid var(--line); border-radius: 4px; background: var(--fill); }
+.empty p { margin: 0; font-size: 15px; color: var(--ink); }
+
+/* Inline form */
+.panel { border: 1.5px solid var(--ink); border-radius: 6px; padding: 16px; display: grid; gap: 12px; max-width: 520px; }
+.panel h3 { margin: 0; font-size: 15px; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 12px; color: var(--muted); }
+.field input, .field textarea { width: 100%; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.error { margin: 0; font-size: 13px; font-weight: 500; }
+
+/* Story labels: annotations, not part of the product */
+.tag {
+  display: inline-block; font-family: var(--font-note); font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.03em; padding: 1px 6px; border-radius: 3px;
+  background: var(--tag-bg); color: var(--tag-fg); vertical-align: middle; white-space: nowrap;
+}
+.no-labels .tag { display: none; }
+.legend { font-family: var(--font-note); font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
+.legend p { margin: 0; max-width: 72ch; }
+
+/* Board: one column per status */
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.column {
+  border: 1.5px solid var(--line); border-radius: 6px; background: var(--fill);
+  display: grid; gap: 10px; padding: 10px; min-height: 260px; align-content: start;
+}
+.column.over { border-color: var(--ink); border-style: dashed; }
+.column-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px; }
+.column-head h3 { margin: 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.count { font-family: var(--font-note); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card {
+  background: var(--surface); border: 1.5px solid var(--ink); border-radius: 4px;
+  padding: 10px; display: grid; gap: 8px; cursor: grab; min-width: 0;
+}
+.card.dragging { opacity: 0.4; }
+.card-title { font-weight: 500; overflow-wrap: anywhere; }
+.card-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.card select { min-width: 0; width: 100%; font-size: 13px; padding: 3px 6px; }
+.due { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.move { display: flex; gap: 4px; }
+.move button { padding: 1px 8px; font-size: 13px; line-height: 1.4; }
+.move button[disabled] { opacity: 0.3; cursor: default; }
+button.small { padding: 2px 10px; font-size: 12px; }
+.confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 1.5px dashed var(--ink); border-radius: 4px; padding: 8px 10px; }
+.confirm p { margin: 0; flex: 1 1 200px; font-size: 13px; font-weight: 500; }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.link-btn { border: 0; background: none; padding: 0; font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.link-btn:hover { color: var(--ink); }
+.confirm.compact { padding: 8px; gap: 6px; }
+.confirm.compact p { flex-basis: 100%; font-size: 12px; }
+th.col-actions, td.col-actions { width: 1%; text-align: right; white-space: nowrap; }
+.muted { color: var(--muted); }
+.drop-hint {
+  border: 1.5px dashed var(--line); border-radius: 4px; padding: 14px 8px;
+  text-align: center; font-size: 12px; color: var(--muted);
+}
+.board-empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  border: 1.5px dashed var(--line); border-radius: 6px; padding: 14px 16px; }
+.board-empty p { margin: 0; font-size: 15px; }
+@media (max-width: 720px) { .board { grid-template-columns: minmax(0, 1fr); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .row-link td { transition: background-color 120ms ease; }
+  .card { transition: opacity 120ms ease; }
+}
+</style>
+
+<div class="wrap" id="app">
+  <div class="meta">
+    <div>
+      <h1>Matriz · low-fidelity wireframe</h1>
+      <div class="where" id="where">Screen 1 of 2: My projects</div>
+    </div>
+    <div class="switches">
+      <label class="switch"><input type="checkbox" id="toggle-empty"> Show empty state</label>
+      <label class="switch"><input type="checkbox" id="toggle-labels" checked> Story labels</label>
+    </div>
+  </div>
+
+  <div class="frame" id="frame">
+    <div class="chrome" aria-hidden="true">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="url" id="url">matriz.local/projects</div>
+    </div>
+    <header class="app-header">
+      <div class="brand">Matriz</div>
+      <div class="user">
+        <span class="avatar" aria-hidden="true"></span>
+        <span>Ana Silva</span>
+        <button class="quiet" type="button" title="Not interactive in this wireframe">Log out</button>
+        <span class="tag">US02</span>
+      </div>
+    </header>
+    <main class="screen" id="screen"></main>
+  </div>
+
+  <div class="legend">
+    <p>Viewed as Ana Silva, manager of Website and Intranet, member of App. Click a project to open it; use "My projects" to go back.</p>
+    <p>Dark labels (US04, US05 …) show which user story each element comes from. They are annotations, not part of the interface.</p>
+    <p>Deleting asks for confirmation on the page first (NFR05). Only the manager can delete a project; any member can delete a task.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var people = ["Ana Silva", "Rui Costa", "Sara Lopes"];
+  var teams = ["Design", "QA"];
+  var statuses = ["To do", "In progress", "Done"];
+
+  // Projects sorted alphabetically (US04 AC01, AC05). In each board column, tasks are newest first (US06).
+  // "created" stands for the creation date: a higher number is newer.
+  var projects = [
+    { id: "app", name: "App", role: "Member", description: "Mobile app for customers",
+      tasks: [
+        { id: 1, created: 2, title: "Publish to the store", status: "To do", assignee: "person:Sara Lopes", due: "2026-11-30" },
+        { id: 2, created: 1, title: "Fix log-in screen", status: "In progress", assignee: "person:Ana Silva", due: "" }
+      ] },
+    { id: "intranet", name: "Intranet", role: "Manager", description: "", tasks: [] },
+    { id: "website", name: "Website", role: "Manager", description: "New company website",
+      tasks: [
+        { id: 3, created: 6, title: "Test the site", status: "To do", assignee: "", due: "" },
+        { id: 4, created: 5, title: "Write the privacy page", status: "To do", assignee: "person:Sara Lopes", due: "2026-11-25" },
+        { id: 5, created: 4, title: "Create logo", status: "In progress", assignee: "team:Design", due: "2026-11-20" },
+        { id: 6, created: 3, title: "Create icons", status: "In progress", assignee: "team:Design", due: "" },
+        { id: 7, created: 2, title: "Review copy", status: "Done", assignee: "person:Rui Costa", due: "" },
+        { id: 8, created: 1, title: "Design home page", status: "Done", assignee: "person:Ana Silva", due: "" }
+      ] }
+  ];
+  var nextId = 9;
+  var dragId = null;
+
+  var state = { view: "home", projectId: null, empty: { home: false, project: false }, form: null, error: "", confirm: null };
+
+  var screen = document.getElementById("screen");
+  var where = document.getElementById("where");
+  var url = document.getElementById("url");
+  var toggleEmpty = document.getElementById("toggle-empty");
+  var toggleLabels = document.getElementById("toggle-labels");
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function tag(t) { return '<span class="tag">' + t + "</span>"; }
+  function project() { return projects.find(function (p) { return p.id === state.projectId; }); }
+  function byName(a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase()); }
+
+  function assigneeSelect(value, i) {
+    var opts = '<option value=""' + (value === "" ? " selected" : "") + ">Unassigned</option>";
+    opts += '<optgroup label="People">' + people.map(function (p) {
+      var v = "person:" + p;
+      return '<option value="' + esc(v) + '"' + (v === value ? " selected" : "") + ">" + esc(p) + "</option>";
+    }).join("") + "</optgroup>";
+    opts += '<optgroup label="Teams">' + teams.map(function (t) {
+      var v = "team:" + t;
+      return '<option value="' + esc(v) + '"' + (v === value ? " selected" : "") + ">" + esc(t) + " (team)</option>";
+    }).join("") + "</optgroup>";
+    return '<select id="assignee-' + i + '" data-assign="' + i + '" aria-label="Assignee">' + opts + "</select>";
+  }
+
+  function findTask(id) {
+    return project().tasks.find(function (t) { return t.id === id; });
+  }
+
+  function moveTask(id, status) {
+    var t = findTask(id);
+    if (t && statuses.indexOf(status) !== -1) t.status = status;
+    render();
+  }
+
+  function confirmBox(message, label, compact) {
+    var size = compact ? " small" : "";
+    return '<div class="confirm' + (compact ? " compact" : "") + '" role="alertdialog" aria-label="Confirm deletion"><p>' + esc(message) +
+      (compact ? "" : " " + tag("NFR05")) + "</p>" +
+      '<button class="primary' + size + '" type="button" data-confirm-delete>' + label + "</button>" +
+      '<button class="' + size.trim() + '" type="button" data-cancel-delete>Cancel</button></div>';
+  }
+
+  function isConfirming(type, id) { return state.confirm && state.confirm.type === type && state.confirm.id === id; }
+
+  function card(t) {
+    var col = statuses.indexOf(t.status);
+    var prev = statuses[col - 1], next = statuses[col + 1];
+    return '<article class="card" draggable="true" data-task="' + t.id + '">' +
+      '<div class="card-head"><div class="card-title">' + esc(t.title) + "</div>" +
+      '<button class="link-btn" type="button" data-delete-task="' + t.id + '" aria-label="Delete task ' + esc(t.title) + '">Delete</button></div>' +
+      assigneeSelect(t.assignee, t.id) +
+      '<div class="card-meta"><span class="due">' + (t.due ? "Due " + esc(t.due) : "No due date") + "</span>" +
+      '<span class="move">' +
+      '<button type="button" data-move="' + t.id + '" data-to="' + (prev || "") + '"' + (prev ? ' aria-label="Move to ' + prev + '"' : " disabled") + ">←</button>" +
+      '<button type="button" data-move="' + t.id + '" data-to="' + (next || "") + '"' + (next ? ' aria-label="Move to ' + next + '"' : " disabled") + ">→</button>" +
+      "</span></div>" +
+      (isConfirming("task", t.id) ? confirmBox('Delete "' + t.title + '"? This can\'t be undone.', "Delete task", true) : "") +
+      "</article>";
+  }
+
+  function renderHome() {
+    var list = projects.slice().sort(byName);
+    var showEmpty = state.empty.home || list.length === 0;
+    var html = '<div class="screen-head"><div><h2>My projects ' + tag("US04") + "</h2></div>" +
+      '<div class="title-row"><button class="primary" type="button" id="new-project">New project</button>' + tag("US03") + "</div></div>";
+
+    if (state.form === "project") {
+      html += '<form class="panel" id="project-form" novalidate><h3>New project ' + tag("US03") + "</h3>" +
+        '<div class="field"><label for="project-name">Name</label><input id="project-name" maxlength="100" autocomplete="off"></div>' +
+        '<div class="field"><label for="project-description">Description (optional)</label><textarea id="project-description" rows="2" maxlength="2000"></textarea></div>' +
+        (state.error ? '<p class="error" role="alert">' + esc(state.error) + "</p>" : "") +
+        '<div class="actions"><button class="primary" type="submit">Create project</button><button type="button" id="cancel-form">Cancel</button></div></form>';
+    }
+
+    if (showEmpty) {
+      html += '<div class="empty"><div class="box" aria-hidden="true"></div>' +
+        "<p>You are not a member of any project yet. " + tag("US04 AC03") + "</p>" +
+        '<button class="primary" type="button" data-new="project">New project</button></div>';
+    } else {
+      html += '<div class="table-wrap"><table><thead><tr><th>Project</th><th>My role ' + tag("US04") + '</th><th class="col-actions">Actions ' + tag("US15") + "</th></tr></thead><tbody>" +
+        list.map(function (p) {
+          var row = '<tr class="row-link" tabindex="0" data-open="' + esc(p.id) + '"><td>' + esc(p.name) +
+            '</td><td><span class="pill">' + p.role + '</span></td><td class="col-actions">' +
+            (p.role === "Manager"
+              ? '<button class="quiet small" type="button" data-delete-project="' + esc(p.id) + '">Delete</button>'
+              : '<span class="muted" title="Only the project manager can delete it">—</span>') +
+            "</td></tr>";
+          if (isConfirming("project", p.id)) {
+            row += '<tr><td colspan="3">' + confirmBox('Delete "' + p.name + '" and all its tasks? This can\'t be undone.', "Delete project", true) + "</td></tr>";
+          }
+          return row;
+        }).join("") + "</tbody></table></div>";
+    }
+    return html;
+  }
+
+  function renderProject() {
+    var p = project();
+    var showEmpty = state.empty.project || p.tasks.length === 0;
+    var html = '<div class="crumb"><a href="#home" id="back">My projects</a> / ' + esc(p.name) + "</div>" +
+      '<div class="screen-head"><div><div class="title-row"><h2>' + esc(p.name) + '</h2><span class="pill">' + p.role + "</span>" + tag("US04") + "</div>" +
+      (p.description ? "<p>" + esc(p.description) + "</p>" : "") + "</div>" +
+      '<div class="title-row"><button class="primary" type="button" id="new-task">New task</button>' + tag("US05") +
+      (p.role === "Manager" ? '<button class="quiet" type="button" data-delete-project="' + esc(p.id) + '">Delete project</button>' + tag("US15") : "") +
+      "</div></div>" +
+      (isConfirming("project", p.id) ? confirmBox('Delete "' + p.name + '" and all its tasks? This can\'t be undone.', "Delete project") : "");
+
+    if (state.form === "task") {
+      html += '<form class="panel" id="task-form" novalidate><h3>New task ' + tag("US05") + "</h3>" +
+        '<div class="field"><label for="task-title">Title</label><input id="task-title" maxlength="200" autocomplete="off"></div>' +
+        '<div class="field"><label for="task-description">Description (optional)</label><textarea id="task-description" rows="2" maxlength="5000"></textarea></div>' +
+        '<div class="field"><label for="task-due">Due date (optional)</label><input id="task-due" type="date"></div>' +
+        (state.error ? '<p class="error" role="alert">' + esc(state.error) + "</p>" : "") +
+        '<div class="actions"><button class="primary" type="submit">Create task</button><button type="button" id="cancel-form">Cancel</button></div></form>';
+    }
+
+    if (showEmpty) {
+      html += '<div class="board-empty"><p>No tasks yet. ' + tag("US06 AC02") + "</p>" +
+        '<button class="primary" type="button" data-new="task">New task</button></div>';
+    } else {
+      html += '<div class="title-row">' + tag("US06 board") + tag("US07 drag or ← → to change status") +
+        tag("US10 US13 assignee on each card") + tag("US16 NFR05 delete with confirmation") + "</div>";
+    }
+
+    html += '<div class="board">' + statuses.map(function (s) {
+      var tasks = showEmpty ? [] : p.tasks.filter(function (t) { return t.status === s; })
+        .sort(function (a, b) { return b.created - a.created; });
+      return '<section class="column" data-column="' + s + '" aria-label="' + s + '">' +
+        '<div class="column-head"><h3>' + s + '</h3><span class="count">' + tasks.length + "</span></div>" +
+        (tasks.length ? tasks.map(card).join("") : '<div class="drop-hint">Drop tasks here</div>') +
+        "</section>";
+    }).join("") + "</div>";
+    return html;
+  }
+
+  function render() {
+    var isHome = state.view === "home";
+    screen.innerHTML = isHome ? renderHome() : renderProject();
+    where.textContent = isHome ? "Screen 1 of 2: My projects" : "Screen 2 of 2: Project — " + project().name;
+    url.textContent = isHome ? "matriz.local/projects" : "matriz.local/projects/" + project().id;
+    // A screen with no data is already empty: the toggle shows it as on and can't be switched off.
+    var naturallyEmpty = isHome ? projects.length === 0 : project().tasks.length === 0;
+    toggleEmpty.checked = naturallyEmpty || (isHome ? state.empty.home : state.empty.project);
+    toggleEmpty.disabled = naturallyEmpty;
+    var first = screen.querySelector("#project-name, #task-title");
+    if (first && state.form && !state.error) first.focus();
+  }
+
+  function go(hash) {
+    var m = /^#project-([a-z0-9-]+)$/.exec(hash || "");
+    if (m && projects.some(function (p) { return p.id === m[1]; })) {
+      state.view = "project"; state.projectId = m[1];
+    } else {
+      state.view = "home"; state.projectId = null;
+    }
+    state.form = null; state.error = ""; state.confirm = null;
+    render();
+  }
+
+  function open(id) {
+    if (location.hash === "#project-" + id) { go(location.hash); } else { location.hash = "project-" + id; }
+  }
+
+  screen.addEventListener("click", function (e) {
+    var del = e.target.closest("[data-delete-project], [data-delete-task]");
+    if (del) {
+      state.confirm = del.hasAttribute("data-delete-project")
+        ? { type: "project", id: del.getAttribute("data-delete-project") }
+        : { type: "task", id: +del.getAttribute("data-delete-task") };
+      render(); return;
+    }
+    if (e.target.closest("[data-cancel-delete]")) { state.confirm = null; render(); return; }
+    if (e.target.closest("[data-confirm-delete]")) { confirmDelete(); return; }
+    if (e.target.closest(".confirm")) return;
+    var row = e.target.closest("[data-open]");
+    if (row) { open(row.getAttribute("data-open")); return; }
+    if (e.target.id === "back") {
+      e.preventDefault();
+      if (location.hash === "#home") { go("#home"); } else { location.hash = "home"; }
+      return;
+    }
+    if (e.target.id === "new-project" || e.target.getAttribute("data-new") === "project") {
+      state.empty.home = false; state.form = "project"; state.error = ""; render(); return;
+    }
+    if (e.target.id === "new-task" || e.target.getAttribute("data-new") === "task") {
+      state.empty.project = false; state.form = "task"; state.error = ""; render(); return;
+    }
+    if (e.target.id === "cancel-form") { state.form = null; state.error = ""; render(); return; }
+    var mv = e.target.closest("[data-move]");
+    if (mv && mv.getAttribute("data-to")) moveTask(+mv.getAttribute("data-move"), mv.getAttribute("data-to"));
+  });
+
+  // Drag a card to another column to change its status (US07).
+  screen.addEventListener("dragstart", function (e) {
+    var c = e.target.closest && e.target.closest("[data-task]");
+    if (!c) return;
+    dragId = +c.getAttribute("data-task");
+    c.classList.add("dragging");
+    try { e.dataTransfer.setData("text/plain", String(dragId)); e.dataTransfer.effectAllowed = "move"; } catch (err) {}
+  });
+  screen.addEventListener("dragend", function () {
+    dragId = null;
+    screen.querySelectorAll(".dragging, .over").forEach(function (el) { el.classList.remove("dragging", "over"); });
+  });
+  screen.addEventListener("dragover", function (e) {
+    var col = e.target.closest && e.target.closest("[data-column]");
+    if (!col || dragId === null) return;
+    e.preventDefault();
+    screen.querySelectorAll(".over").forEach(function (el) { if (el !== col) el.classList.remove("over"); });
+    col.classList.add("over");
+  });
+  screen.addEventListener("drop", function (e) {
+    var col = e.target.closest && e.target.closest("[data-column]");
+    if (!col || dragId === null) return;
+    e.preventDefault();
+    var id = dragId;
+    dragId = null;
+    moveTask(id, col.getAttribute("data-column"));
+  });
+
+  function confirmDelete() {
+    var c = state.confirm;
+    state.confirm = null;
+    if (!c) return;
+    if (c.type === "project") {
+      projects = projects.filter(function (p) { return p.id !== c.id; });
+      if (state.view === "project") {
+        if (location.hash === "#home") { go("#home"); } else { location.hash = "home"; }
+        return;
+      }
+    } else {
+      var p = project();
+      p.tasks = p.tasks.filter(function (t) { return t.id !== c.id; });
+    }
+    render();
+  }
+
+  screen.addEventListener("keydown", function (e) {
+    if (e.target.tagName === "BUTTON") return;
+    var row = e.target.closest && e.target.closest("[data-open]");
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(row.getAttribute("data-open")); }
+  });
+
+  screen.addEventListener("change", function (e) {
+    var p = project();
+    if (!p) return;
+    if (e.target.hasAttribute("data-assign")) findTask(+e.target.getAttribute("data-assign")).assignee = e.target.value;
+  });
+
+  screen.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (e.target.id === "project-form") {
+      var name = document.getElementById("project-name").value.trim();
+      if (!name) { state.error = "Project name is required."; render(); return; }
+      var id = "p" + Date.now();
+      projects.push({ id: id, name: name, role: "Manager",
+        description: document.getElementById("project-description").value.trim(), tasks: [] });
+      state.form = null; state.error = ""; render();
+    }
+    if (e.target.id === "task-form") {
+      var title = document.getElementById("task-title").value.trim();
+      if (!title) { state.error = "Task title is required."; render(); return; }
+      project().tasks.push({ id: nextId, created: nextId, title: title, status: "To do", assignee: "",
+        due: document.getElementById("task-due").value });
+      nextId++;
+      state.form = null; state.error = ""; render();
+    }
+  });
+
+  toggleEmpty.addEventListener("change", function () {
+    if (state.view === "home") state.empty.home = toggleEmpty.checked; else state.empty.project = toggleEmpty.checked;
+    state.form = null; state.error = ""; render();
+  });
+
+  toggleLabels.addEventListener("change", function () {
+    document.getElementById("app").classList.toggle("no-labels", !toggleLabels.checked);
+  });
+
+  window.addEventListener("hashchange", function () { go(location.hash); });
+  go(location.hash);
+})();
+</script>
