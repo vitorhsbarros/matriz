@@ -1,0 +1,1 @@
+I want you to create a separate constraints file (similar to the requirements one) and update the requirements file accordingly. While you're at it, put all the files in English and rename them too, please.
