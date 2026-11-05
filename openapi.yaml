@@ -1,0 +1,1477 @@
+openapi: 3.1.0
+info:
+  title: Matriz API
+  version: 0.1.0
+  summary: Project and task management API for the Matriz MVP.
+  description: |
+    Specification of every operation needed by the Matriz MVP (user stories US01–US18).
+    The design decisions, the mapping to the user stories and the assumptions are
+    explained in `docs/api-contract.md`.
+
+    **Authentication.** Signing up and logging in are public. Every other operation
+    requires a logged-in user, identified by a session cookie. Operations that change
+    data also require a CSRF token header, returned when the session is created.
+
+    **Access.** A user who isn't a member of a project gets "Project not found." for
+    that project and anything inside it, the same as for a project that doesn't exist
+    (NFR03, DoD03).
+
+    **Errors.** Errors use Problem Details (RFC 9457). The `detail` field carries the
+    exact message defined in the user stories' acceptance criteria. When several
+    validations fail, only the first one is reported, in the order the fields are
+    listed in the request schema.
+
+    **Validation.** `400` is only returned when the body isn't valid JSON, has unknown
+    fields, or has a field of the wrong JSON type (e.g. a number where text is
+    expected). Missing or empty required fields, lengths, formats (email, date) and
+    enum values are business validations: they return `422` with the message from the
+    acceptance criteria. The schema keywords `required`, `minLength`, `maxLength`,
+    `format` and `enum` document these rules, and must not be enforced by a generic
+    validator that returns `400`.
+
+    **Text fields.** Leading and trailing spaces are removed before validation, and
+    length limits apply to the trimmed value (D01, D02). Emails are compared ignoring
+    case (D03).
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local server (development and demonstration). The session cookie is `Secure`, so over plain HTTP it only works when the page is opened on the same machine (`localhost`). Reached from another machine, the server must use HTTPS (ADR-0002).
+
+security:
+  - sessionCookie: []
+    csrfToken: []
+
+tags:
+  - name: Accounts
+    description: Sign-up, log-in and log-out (Accounts module).
+  - name: Projects
+    description: Projects and their members (Projects module).
+  - name: Teams
+    description: Teams and their members (Teams module).
+  - name: Tasks
+    description: Tasks of a project (Tasks module).
+
+paths:
+  # ---------------------------------------------------------------- Accounts
+  /users:
+    post:
+      tags: [Accounts]
+      operationId: signUp
+      summary: Create an account
+      description: |
+        Creates an account and logs the new user in: the response sets the session
+        cookie and returns the CSRF token (US01 AC01). User story: US01.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+            example:
+              name: Ana Silva
+              email: ana@example.com
+              password: secure123
+      responses:
+        '201':
+          description: Account created and session started.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              example:
+                user:
+                  id: 0b9f3c1e-6a2d-4e8f-9c1b-2a3d4e5f6a70
+                  name: Ana Silva
+                  email: ana@example.com
+                csrfToken: 4f1c9a7e2b8d4c6a9e0f1b2c3d4e5f6a
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '409':
+          description: The email is already used by another account, ignoring case (US01 AC02, AC03).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Conflict, status: 409, detail: "This email is already in use."}
+        '422':
+          description: Invalid sign-up data (US01 AC04–AC07).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Name is required."}}
+                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Name must be at most 100 characters."}}
+                emailRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Email is required."}}
+                emailInvalid: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Enter a valid email address."}}
+                passwordRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Password is required."}}
+                passwordTooShort: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Password must be at least 8 characters."}}
+                passwordTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Password must be at most 128 characters."}}
+
+  /session:
+    post:
+      tags: [Accounts]
+      operationId: logIn
+      summary: Log in
+      description: |
+        Starts a session: sets the session cookie and returns the CSRF token.
+        The email is compared ignoring case; the password is case-sensitive.
+        User story: US02.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogInRequest'
+            example:
+              email: ana@example.com
+              password: secure123
+      responses:
+        '200':
+          description: Logged in (US02 AC01, AC07).
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetSessionCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          description: |
+            Wrong password or unregistered email. Both get the same message, so the
+            response doesn't reveal whether the email exists (US02 AC03, AC04, AC08, AC09).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Unauthorized, status: 401, detail: "Invalid email or password."}
+        '422':
+          description: Email or password missing (US02 AC05).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Email and password are required."}
+    get:
+      tags: [Accounts]
+      operationId: getSession
+      summary: Get the current session
+      description: |
+        Returns the logged-in user and the CSRF token, so the client can restore its
+        state after a page reload. User story: US02.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The current session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+    delete:
+      tags: [Accounts]
+      operationId: logOut
+      summary: Log out
+      description: |
+        Ends the session on the server and clears the cookie. Any later request with the
+        old cookie gets "Please log in to continue." (US02 AC02).
+      responses:
+        '204':
+          description: Logged out.
+          headers:
+            Set-Cookie:
+              description: Clears the session cookie.
+              schema:
+                type: string
+              example: MATRIZ_SESSION=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+
+  # ---------------------------------------------------------------- Projects
+  /projects:
+    get:
+      tags: [Projects]
+      operationId: listMyProjects
+      summary: List the projects I am a member of
+      description: |
+        Returns the projects the current user is a member of, with their role, sorted
+        alphabetically by name ignoring case (US04 AC01, AC05). An empty list means the
+        user isn't a member of any project; the interface then shows "You are not a
+        member of any project yet." (US04 AC03). User story: US04.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The user's projects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectSummary'
+              example:
+                - {id: 9a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d, name: App, role: MEMBER}
+                - {id: 5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10, name: Website, role: MANAGER}
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+    post:
+      tags: [Projects]
+      operationId: createProject
+      summary: Create a project
+      description: |
+        Creates a project. The creator becomes its manager and a member (FR03, D07).
+        Project names can repeat (D06). User story: US03.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+            example:
+              name: Website
+              description: New company website
+      responses:
+        '201':
+          description: Project created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                id: 5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10
+                name: Website
+                description: New company website
+                role: MANAGER
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '422':
+          description: Invalid project data (US03 AC03–AC05).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Project name is required."}}
+                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Project name must be at most 100 characters."}}
+                descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
+
+  /projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Projects]
+      operationId: getProject
+      summary: Get a project
+      description: |
+        Returns a project the user is a member of, with their role. Used when the user
+        opens a project (US04 AC02).
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The project.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+    patch:
+      tags: [Projects]
+      operationId: updateProject
+      summary: Edit a project
+      description: |
+        Changes only the fields present in the body. `null` clears the description.
+        Only the project manager can edit the project. Project names can repeat (D06).
+        User story: US14.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+            example: {name: Company website, description: Public site and blog}
+      responses:
+        '200':
+          description: Project updated (US14 AC01, AC02, AC07). Returns the whole project.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          description: The CSRF token is invalid, or the user is a member but not the manager (US14 AC04).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the project manager can edit the project."}}
+                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+        '422':
+          description: Invalid project data (US14 AC03, AC06).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Project name is required."}}
+                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Project name must be at most 100 characters."}}
+                descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
+    delete:
+      tags: [Projects]
+      operationId: deleteProject
+      summary: Delete a project
+      description: |
+        Deletes the project, its memberships and all its tasks, in one transaction (FR05,
+        US15 AC02). Teams are not affected (US15 AC06). Only the project manager can do
+        this. The browser application asks the user to confirm before calling this
+        operation (NFR05, US15 AC01, AC03). User story: US15.
+      responses:
+        '204':
+          description: Project deleted. Any later request for it gets "Project not found."
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          description: The CSRF token is invalid, or the user is a member but not the manager (US15 AC04).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the project manager can delete the project."}}
+                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+
+  /projects/{projectId}/members:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Projects]
+      operationId: listProjectMembers
+      summary: List the project's members
+      description: |
+        Returns every member with name, email and role, sorted alphabetically by name.
+        Any member can see the list. User story: US09.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The project's members.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectMember'
+              example:
+                - {userId: 0b9f3c1e-6a2d-4e8f-9c1b-2a3d4e5f6a70, name: Ana Silva, email: ana@example.com, role: MANAGER}
+                - {userId: 3f6b2d1a-9c8e-4b7a-a1d2-6e5f4c3b2a10, name: Rui Costa, email: rui@example.com, role: MEMBER}
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+    post:
+      tags: [Projects]
+      operationId: addProjectMember
+      summary: Add a member to the project
+      description: |
+        Adds the user with the given email (ignoring case) as a member. Only the project
+        manager can do this. User story: US09.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMemberRequest'
+            example:
+              email: rui@example.com
+      responses:
+        '201':
+          description: Member added (US09 AC01, AC08).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          description: The CSRF token is invalid, or the user is a member but not the manager (US09 AC07).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the project manager can manage members."}}
+                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+        '409':
+          description: The user is already a member (US09 AC05).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Conflict, status: 409, detail: "This user is already a member of the project."}
+        '422':
+          description: The user can't be added (US09 AC04, no account with this email; the message doesn't reveal whether the account exists, SEC09), or the email is missing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                userNotFound: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "This user could not be added."}}
+                emailRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Email is required."}}
+
+  /projects/{projectId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/UserId'
+    delete:
+      tags: [Projects]
+      operationId: removeProjectMember
+      summary: Remove a member from the project
+      description: |
+        Removes the member. In the same transaction, the tasks assigned to that person in
+        this project become unassigned; tasks assigned to teams are not affected (D10,
+        US09 AC03). The removed user loses access to the project (US09 AC02).
+        Only the project manager can do this, and the manager can't be removed.
+        User story: US09.
+      responses:
+        '204':
+          description: Member removed.
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          description: The CSRF token is invalid, or the user is a member but not the manager (US09 AC07).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the project manager can manage members."}}
+                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+        '404':
+          description: The project isn't accessible, or the user isn't a member of it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                projectNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Project not found."}}
+                memberNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Member not found."}}
+        '422':
+          description: Trying to remove the manager (US09 AC06).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Unprocessable Content, status: 422, detail: "The project manager cannot be removed."}
+
+  # ---------------------------------------------------------------- Teams
+  /teams:
+    get:
+      tags: [Teams]
+      operationId: listTeams
+      summary: List all teams
+      description: |
+        Returns every team with its members, sorted alphabetically by name. Every user can
+        see every team (D05), so tasks can be assigned to them. User stories: US11, US12, US13.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: All teams.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Team'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+    post:
+      tags: [Teams]
+      operationId: createTeam
+      summary: Create a team
+      description: |
+        Creates a team. The creator becomes its manager and a member (FR08, D07).
+        Team names are unique, ignoring case and surrounding spaces (D06). User story: US11.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTeamRequest'
+            example:
+              name: Design
+      responses:
+        '201':
+          description: Team created (US11 AC01).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+              example:
+                id: 7a1e9b4c-2d3f-4e5a-8b6c-9d0e1f2a3b4c
+                name: Design
+                members:
+                  - {userId: 0b9f3c1e-6a2d-4e8f-9c1b-2a3d4e5f6a70, name: Ana Silva, role: MANAGER}
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '409':
+          description: A team with this name already exists (US11 AC03, AC04).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Conflict, status: 409, detail: "A team with this name already exists."}
+        '422':
+          description: Invalid team name (US11 AC02, AC05).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team name is required."}}
+                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team name must be at most 50 characters."}}
+
+  /teams/{teamId}:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    patch:
+      tags: [Teams]
+      operationId: renameTeam
+      summary: Rename a team
+      description: |
+        Renames the team. The name stays unique among all teams, ignoring case and
+        surrounding spaces (D06). Tasks assigned to the team keep their assignment.
+        Only the team manager can do this. User story: US17.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequest'
+            example: {name: Product design}
+      responses:
+        '200':
+          description: Team renamed (US17 AC01, AC06). Returns the whole team.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          description: The CSRF token is invalid, or the user isn't the team manager (US17 AC04).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the team manager can edit the team."}}
+                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+        '404':
+          $ref: '#/components/responses/TeamNotFound'
+        '409':
+          description: Another team already has this name, ignoring case (US17 AC02).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Conflict, status: 409, detail: "A team with this name already exists."}
+        '422':
+          description: Invalid team name (US17 AC03, AC07).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team name is required."}}
+                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team name must be at most 50 characters."}}
+    delete:
+      tags: [Teams]
+      operationId: deleteTeam
+      summary: Delete a team
+      description: |
+        Deletes the team and its memberships, and unassigns every task assigned to the
+        team, in one transaction (FR20, US18 AC02). The members keep their accounts and
+        project memberships. Only the team manager can do this. The browser application
+        asks the user to confirm before calling this operation (NFR05, US18 AC01, AC03).
+        User story: US18.
+      responses:
+        '204':
+          description: Team deleted.
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          description: The CSRF token is invalid, or the user isn't the team manager (US18 AC04).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the team manager can delete the team."}}
+                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+        '404':
+          $ref: '#/components/responses/TeamNotFound'
+
+  /teams/{teamId}/members:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    post:
+      tags: [Teams]
+      operationId: addTeamMember
+      summary: Add a member to the team
+      description: |
+        Adds the user with the given email (ignoring case). Only the team manager can do
+        this. Existing task assignments to the team are kept, even if the new member isn't
+        in those projects (D09, US12 AC08). User story: US12.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMemberRequest'
+            example:
+              email: rui@example.com
+      responses:
+        '201':
+          description: Member added (US12 AC01, AC07).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          description: The CSRF token is invalid, or the user isn't the team manager (US12 AC06).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the team manager can manage members."}}
+                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+        '404':
+          $ref: '#/components/responses/TeamNotFound'
+        '409':
+          description: The user is already a member (US12 AC04).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Conflict, status: 409, detail: "This user is already a member of the team."}
+        '422':
+          description: The user can't be added (US12 AC03, no account with this email; the message doesn't reveal whether the account exists, SEC09), or the email is missing.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                userNotFound: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "This user could not be added."}}
+                emailRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Email is required."}}
+
+  /teams/{teamId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+      - $ref: '#/components/parameters/UserId'
+    delete:
+      tags: [Teams]
+      operationId: removeTeamMember
+      summary: Remove a member from the team
+      description: |
+        Removes the member. Existing task assignments to the team are kept (D09).
+        Only the team manager can do this, and the manager can't be removed.
+        User story: US12.
+      responses:
+        '204':
+          description: Member removed (US12 AC02).
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          description: The CSRF token is invalid, or the user isn't the team manager (US12 AC06).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the team manager can manage members."}}
+                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+        '404':
+          description: The team doesn't exist, or the user isn't a member of it.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                teamNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Team not found."}}
+                memberNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Member not found."}}
+        '422':
+          description: Trying to remove the manager (US12 AC05).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example: {type: about:blank, title: Unprocessable Content, status: 422, detail: "The team manager cannot be removed."}
+
+  # ---------------------------------------------------------------- Tasks
+  /projects/{projectId}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Tasks]
+      operationId: listProjectTasks
+      summary: List the project's tasks
+      description: |
+        Returns every task of the project, including done ones, from newest to oldest by
+        creation date (US06 AC01). An empty list means the project has no tasks; the
+        interface then shows "No tasks yet." (US06 AC02). Changes by other members are
+        visible as soon as they are saved (NFR07, US06 AC05). User story: US06.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The project's tasks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+    post:
+      tags: [Tasks]
+      operationId: createTask
+      summary: Create a task in a project
+      description: |
+        Creates a task in the project. The task starts in the `TO_DO` status and with no
+        assignee. User story: US05.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              allFields:
+                summary: Every field (US05 AC01)
+                value: {title: Design home page, description: Follow the style guide, dueDate: '2026-11-20'}
+              titleOnly:
+                summary: Only a title (US05 AC02)
+                value: {title: Review copy}
+      responses:
+        '201':
+          description: Task created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: 8d3e1c52-7a5b-4f0e-bb0e-3c1c2a9e4d21
+                projectId: 5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10
+                title: Design home page
+                description: Follow the style guide
+                dueDate: '2026-11-20'
+                status: TO_DO
+                assignee: null
+                createdAt: '2026-11-02T10:15:30Z'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+        '422':
+          $ref: '#/components/responses/InvalidTaskData'
+
+  /projects/{projectId}/tasks/{taskId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+    patch:
+      tags: [Tasks]
+      operationId: updateTask
+      summary: Edit a task or change its status
+      description: |
+        Changes only the fields present in the body. A field set to `null` is cleared
+        (only `description` and `dueDate` can be cleared). The change is all-or-nothing:
+        if any field is invalid, nothing is saved (US08 AC05). Editing doesn't change the
+        assignee. Any project member can change any task (D08); the last saved change wins
+        (D11). A due date already in the past is only checked if it is changed (D12,
+        US08 AC07). User stories: US07 (status), US08 (title, description, due date).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+            examples:
+              changeStatus:
+                summary: Change the status (US07 AC01)
+                value: {status: IN_PROGRESS}
+              editFields:
+                summary: Edit every field (US08 AC01)
+                value: {title: Test the site in production, description: Test on mobile and tablet, dueDate: '2026-11-25'}
+              clearFields:
+                summary: Clear the description and due date (US08 AC02)
+                value: {description: null, dueDate: null}
+      responses:
+        '200':
+          description: Task updated. Returns the whole task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '404':
+          $ref: '#/components/responses/ProjectOrTaskNotFound'
+        '422':
+          description: |
+            Invalid data (US07 AC04, US08 AC03–AC05). Besides the messages below, the task
+            data messages of `createTask` apply (title and description length, invalid date).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                invalidStatus: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid status."}}
+                titleRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title is required."}}
+                dueDateInPast: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
+    delete:
+      tags: [Tasks]
+      operationId: deleteTask
+      summary: Delete a task
+      description: |
+        Deletes the task. Any project member can delete any task of the project (D08).
+        The browser application asks the user to confirm before calling this operation
+        (NFR05, US16 AC01, AC03). User story: US16.
+      responses:
+        '204':
+          description: Task deleted (US16 AC02, AC06, AC07).
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '404':
+          $ref: '#/components/responses/ProjectOrTaskNotFound'
+
+  /projects/{projectId}/tasks/{taskId}/assignee:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+    put:
+      tags: [Tasks]
+      operationId: assignTask
+      summary: Assign a task to a person or a team
+      description: |
+        Sets the task's assignee, replacing any previous one (US10 AC02, US13 AC02–AC03).
+        A task has at most one assignee: a person or a team.
+
+        - A **person** must be a member of the project at the moment of assignment
+          (US10 AC04–AC05).
+        - A **team** must have all its members in the project at the moment of
+          assignment (D09, US13 AC04). Later changes to the team don't undo the
+          assignment.
+
+        Assigning the current assignee again succeeds and changes nothing (US10 AC07).
+        No other task field changes (US10 AC09). User stories: US10, US13.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTaskRequest'
+            examples:
+              person:
+                summary: Assign to a person (US10 AC01)
+                value: {type: person, userId: 3f6b2d1a-9c8e-4b7a-a1d2-6e5f4c3b2a10}
+              team:
+                summary: Assign to a team (US13 AC01)
+                value: {type: team, teamId: 7a1e9b4c-2d3f-4e5a-8b6c-9d0e1f2a3b4c}
+      responses:
+        '200':
+          description: Task assigned. Returns the whole task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: 8d3e1c52-7a5b-4f0e-bb0e-3c1c2a9e4d21
+                projectId: 5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10
+                title: Create icons
+                description: null
+                dueDate: null
+                status: IN_PROGRESS
+                assignee: {type: team, teamId: 7a1e9b4c-2d3f-4e5a-8b6c-9d0e1f2a3b4c, name: Design}
+                createdAt: '2026-11-02T10:15:30Z'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '404':
+          $ref: '#/components/responses/ProjectOrTaskNotFound'
+        '422':
+          description: The assignee can't be assigned this task. The assignee is unchanged.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                personNotMember:
+                  summary: Person isn't a project member (US10 AC04, AC05)
+                  value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "The assignee must be a member of the project."}
+                teamMembersOutsideProject:
+                  summary: A team member isn't in the project (US13 AC04)
+                  value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "All team members must belong to the project."}
+                teamNotFound:
+                  summary: The team doesn't exist (US13 AC05)
+                  value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team not found."}
+    delete:
+      tags: [Tasks]
+      operationId: unassignTask
+      summary: Undo the task's assignment
+      description: |
+        Removes the assignee, whether a person or a team. Undoing the assignment of an
+        unassigned task succeeds and changes nothing (US10 AC08). User stories: US10, US13.
+      responses:
+        '200':
+          description: Task unassigned (US10 AC03). Returns the whole task, with `assignee` set to `null`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '404':
+          $ref: '#/components/responses/ProjectOrTaskNotFound'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: MATRIZ_SESSION
+      description: |
+        Session cookie set at sign-up and log-in. It is `HttpOnly`, `Secure` and
+        `SameSite=Lax`. The session is stored on the server, in the shared database, so
+        log-out invalidates it immediately and any instance can serve the request.
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: |
+        CSRF token, required on every operation that changes data once logged in. It is
+        returned in the `Session` body at sign-up, log-in and `GET /session`, and must
+        match the session.
+
+  headers:
+    SetSessionCookie:
+      description: Sets the session cookie.
+      schema:
+        type: string
+      example: MATRIZ_SESSION=d41d8cd98f00b204e9800998ecf8427e; Path=/; HttpOnly; Secure; SameSite=Lax
+    Location:
+      description: URL of the created resource.
+      schema:
+        type: string
+        format: uri-reference
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      description: Identifier of the project.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      description: Identifier of the task.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    TeamId:
+      name: teamId
+      in: path
+      required: true
+      description: Identifier of the team.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: Identifier of the user.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+
+  responses:
+    MalformedRequest:
+      description: The request body isn't valid JSON, has unknown fields, or has a field of the wrong JSON type. Missing, empty or out-of-range values return `422` instead.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example: {type: about:blank, title: Bad Request, status: 400, detail: "The request body is not valid."}
+    NotLoggedIn:
+      description: No valid session (NFR02, DoD02).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example: {type: about:blank, title: Unauthorized, status: 401, detail: "Please log in to continue."}
+    InvalidCsrfToken:
+      description: The CSRF token is missing or doesn't match the session.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}
+    ProjectNotFound:
+      description: |
+        The project doesn't exist or the user isn't a member of it. Both cases get the
+        same response, so users can't find out which projects exist (NFR03, DoD03).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example: {type: about:blank, title: Not Found, status: 404, detail: "Project not found."}
+    ProjectOrTaskNotFound:
+      description: The project isn't accessible (NFR03, DoD03), or the task doesn't exist in it.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            projectNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Project not found."}}
+            taskNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Task not found."}}
+    TeamNotFound:
+      description: The team doesn't exist.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example: {type: about:blank, title: Not Found, status: 404, detail: "Team not found."}
+    InvalidTaskData:
+      description: |
+        The task data is invalid (US05 AC03–AC05, AC08). Validations are checked in the
+        order title, description, due date, and the first one that fails is reported.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            titleRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title is required."}}
+            titleTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title must be at most 200 characters."}}
+            descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 5000 characters."}}
+            dueDateInPast: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
+            dueDateInvalid: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Enter a valid date."}}
+
+  schemas:
+    Identifier:
+      type: string
+      format: uuid
+      description: System-generated identifier with no business meaning.
+      examples: [5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10]
+
+    Role:
+      type: string
+      enum: [MANAGER, MEMBER]
+      description: Role in a project or team. The interface shows "Manager" or "Member".
+
+    TaskStatus:
+      type: string
+      enum: [TO_DO, IN_PROGRESS, DONE]
+      description: Status of a task (FR13). The interface shows "To do", "In progress" and "Done".
+
+    # Accounts
+    SignUpRequest:
+      type: object
+      additionalProperties: false
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 1–100 characters after trimming.
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Unique, ignoring case. Stored in lowercase after trimming.
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+          description: 8–128 characters. Not trimmed. Never stored or returned in readable form (NFR04).
+
+    LogInRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          writeOnly: true
+
+    User:
+      type: object
+      required: [id, name, email]
+      properties:
+        id:
+          $ref: '#/components/schemas/Identifier'
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+
+    Session:
+      type: object
+      required: [user, csrfToken]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        csrfToken:
+          type: string
+          description: Value to send in the `X-CSRF-Token` header on operations that change data.
+
+    # Projects
+    CreateProjectRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 1–100 characters after trimming. Doesn't need to be unique.
+        description:
+          type: [string, 'null']
+          maxLength: 2000
+          description: Optional. Up to 2000 characters after trimming.
+
+    UpdateProjectRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: Only the fields present are changed. `null` clears the description.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 1–100 characters after trimming. Doesn't need to be unique.
+        description:
+          type: [string, 'null']
+          maxLength: 2000
+          description: Up to 2000 characters after trimming.
+
+    Project:
+      type: object
+      required: [id, name, description, role]
+      properties:
+        id:
+          $ref: '#/components/schemas/Identifier'
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        role:
+          $ref: '#/components/schemas/Role'
+          description: The current user's role in the project.
+
+    ProjectSummary:
+      type: object
+      required: [id, name, role]
+      properties:
+        id:
+          $ref: '#/components/schemas/Identifier'
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+          description: The current user's role in the project.
+
+    AddMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          description: Email of an existing account, compared ignoring case (D03, D04).
+
+    ProjectMember:
+      type: object
+      required: [userId, name, email, role]
+      properties:
+        userId:
+          $ref: '#/components/schemas/Identifier'
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/Role'
+
+    # Teams
+    UpdateTeamRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: 1–50 characters after trimming. Unique, ignoring case.
+
+    CreateTeamRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: 1–50 characters after trimming. Unique, ignoring case.
+
+    Team:
+      type: object
+      required: [id, name, members]
+      properties:
+        id:
+          $ref: '#/components/schemas/Identifier'
+        name:
+          type: string
+        members:
+          type: array
+          description: The team's members, sorted alphabetically by name. Always includes the manager.
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/TeamMember'
+
+    TeamMember:
+      type: object
+      required: [userId, name, role]
+      properties:
+        userId:
+          $ref: '#/components/schemas/Identifier'
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+
+    # Tasks
+    CreateTaskRequest:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Required. 1–200 characters after trimming.
+        description:
+          type: [string, 'null']
+          maxLength: 5000
+          description: Optional. Up to 5000 characters after trimming.
+        dueDate:
+          type: [string, 'null']
+          format: date
+          description: Optional. A valid calendar date, not earlier than the current day (D12).
+
+    UpdateTaskRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: Only the fields present are changed. `null` clears `description` or `dueDate`.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, 'null']
+          maxLength: 5000
+        dueDate:
+          type: [string, 'null']
+          format: date
+          description: If changed, not earlier than the current day (D12).
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+
+    AssignTaskRequest:
+      description: The new assignee, either a person or a team.
+      oneOf:
+        - $ref: '#/components/schemas/AssignToPerson'
+        - $ref: '#/components/schemas/AssignToTeam'
+      discriminator:
+        propertyName: type
+        mapping:
+          person: '#/components/schemas/AssignToPerson'
+          team: '#/components/schemas/AssignToTeam'
+
+    AssignToPerson:
+      type: object
+      additionalProperties: false
+      required: [type, userId]
+      properties:
+        type:
+          type: string
+          const: person
+        userId:
+          $ref: '#/components/schemas/Identifier'
+
+    AssignToTeam:
+      type: object
+      additionalProperties: false
+      required: [type, teamId]
+      properties:
+        type:
+          type: string
+          const: team
+        teamId:
+          $ref: '#/components/schemas/Identifier'
+
+    Task:
+      type: object
+      required: [id, projectId, title, description, dueDate, status, assignee, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Identifier'
+        projectId:
+          $ref: '#/components/schemas/Identifier'
+        title:
+          type: string
+        description:
+          type: [string, 'null']
+        dueDate:
+          type: [string, 'null']
+          format: date
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        assignee:
+          description: Who is responsible for the task, or `null` if unassigned.
+          oneOf:
+            - $ref: '#/components/schemas/PersonAssignee'
+            - $ref: '#/components/schemas/TeamAssignee'
+            - type: 'null'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the task was created. Used to sort the task list (US06).
+
+    PersonAssignee:
+      type: object
+      required: [type, userId, name]
+      properties:
+        type:
+          type: string
+          const: person
+        userId:
+          $ref: '#/components/schemas/Identifier'
+        name:
+          type: string
+          description: The person's name, as shown in the task list.
+
+    TeamAssignee:
+      type: object
+      required: [type, teamId, name]
+      properties:
+        type:
+          type: string
+          const: team
+        teamId:
+          $ref: '#/components/schemas/Identifier'
+        name:
+          type: string
+          description: The team's name. The task list shows it followed by "(team)".
+
+    Problem:
+      type: object
+      description: Problem Details (RFC 9457).
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          default: about:blank
+        title:
+          type: string
+          description: Short summary of the HTTP status.
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          description: The exact message from the user story, shown to the user as is.
+        instance:
+          type: string
+          format: uri-reference
