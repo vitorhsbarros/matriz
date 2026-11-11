@@ -65,8 +65,10 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
     - [review-01](docs/reviews/review-01.md) covers the Architecture Pack.
   - A [prompt injection test](docs/reviews/prompt-injection-challenge.md) checked that agents treat external documents as data.
   - The MVP was then [reconciled with a new scope](docs/reviews/scope-reconciliation.md) before implementation.
-- **Implementation:** started. The application and its persistence are set up (increment I0 of the [implementation plan](docs/implementation-plan.md)): Java 21, Spring Boot 4, PostgreSQL with Flyway, and a React + TypeScript browser application built into the same JAR ([docs/architecture.md, section 5](docs/architecture.md#5-technology-stack)).
-- **Next step:** increment I1, log-in and log-out with the demo accounts (US19, US02).
+- **Implementation:** started. Java 21, Spring Boot 4, PostgreSQL with Flyway, and a React + TypeScript browser application built into the same JAR ([docs/architecture.md, section 5](docs/architecture.md#5-technology-stack)). Done so far, from the [implementation plan](docs/implementation-plan.md):
+  - I0: the application and its persistence are set up;
+  - I1: log-in, the current user and log-out with the demo accounts (US19, US02), and the project access check that the next increments use.
+- **Next step:** increment I2, projects, tasks, the board and the home dashboard (US03, US05, US06, US04).
 
 ## Running the application
 
@@ -89,10 +91,16 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
    java -jar target/matriz-0.1.0-SNAPSHOT.jar
    ```
    Or, without building the JAR first: `./mvnw spring-boot:run`. Use another port with `SERVER_PORT=8081`.
-5. **Check.** `http://localhost:8080/actuator/health` answers `{"status":"UP"}` when the database is reachable, and `http://localhost:8080/` shows the start page.
+5. **Check.** `http://localhost:8080/actuator/health` answers `{"status":"UP"}` when the database is reachable, and `http://localhost:8080/` shows the log-in screen.
 
-**Working on the browser application:** `cd frontend && npm install && npm run dev` starts Vite on `http://localhost:5173`, which forwards `/api` to the application on port 8080. `npm test` runs its tests.
+**Working on the browser application:** `cd frontend && npm install && npm run dev` starts Vite on `http://localhost:5173`, which forwards `/api` to the application on port 8080 (or on `MATRIZ_API_PORT`, e.g. `MATRIZ_API_PORT=8081 npm run dev`). `npm test` runs its tests.
 
-**Demo accounts** (made-up people, PRI05): `ana@example.com`, `rui@example.com` and `sara@example.com`, with the passwords set in `.env`. In the project *Website*, Ana is the manager, Rui is a member and Sara is not a member; in *App*, Rui is the manager and Ana is a member. Log-in arrives in I1.
+**Demo accounts** (made-up people, PRI05): `ana@example.com`, `rui@example.com` and `sara@example.com`, with the passwords set in `.env`. In the project *Website*, Ana is the manager, Rui is a member and Sara is not a member; in *App*, Rui is the manager and Ana is a member. Log in with any of them on the start page.
+
+**Sessions** ([ADR-0002](docs/architecture/adr/ADR-0002-session-cookie-authentication.md); details in [docs/api-contract.md, section 4](docs/api-contract.md#4-authentication)):
+- Log-in starts a session on the server, stored in PostgreSQL, and sets the `MATRIZ_SESSION` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`). Every log-in gets a new session identifier and a new CSRF token.
+- The browser application sends the CSRF token in the `X-CSRF-Token` header on every request that changes data. It keeps the token in memory only.
+- A session ends after **30 minutes without requests** (PD02), or at once with **Log out**. The application then shows the log-in screen with "Please log in to continue.".
+- The `Secure` cookie works over plain HTTP only on `localhost`, in Chrome and Firefox; Safari may refuse it. Anywhere else, the application must be served over HTTPS (SEC08).
 
 **Stop:** `Ctrl+C` stops the application; `docker compose down` stops PostgreSQL and keeps its data (`docker compose down -v` deletes it).

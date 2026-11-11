@@ -29,6 +29,9 @@ spring:
 server:
   servlet:
     session:
+      # PD02 (decided 2026-11-11): a session ends after 30 minutes without requests; each request renews
+      # it. Spring Session deletes expired sessions from the database every minute.
+      timeout: 30m
       cookie:
         name: MATRIZ_SESSION
         http-only: true

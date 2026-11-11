@@ -229,6 +229,22 @@ The cross-cutting criteria in the [user stories README](user-stories.md) apply t
   - any application instance can serve any request (ADR-0001).
 - **CSRF:** log-in and `GET /session` return a `csrfToken` in the `Session` body. Every operation that changes data while logged in must send it in the `X-CSRF-Token` header. Log-in doesn't need it, because there is no session yet. Log-out (`DELETE /session`) does need it, because it changes data while logged in.
 
+### Session lifecycle
+
+Implemented in increment I1 ([implementation-plan.md](implementation-plan.md)).
+
+1. **Log-in** (`POST /session`). The email is compared ignoring case and spaces, and the password exactly as typed.
+   - On success, the server starts the session with a **new session identifier**, even if the browser sent an older cookie, so an identifier known before log-in is useless after it (session fixation). It also issues a **new CSRF token**, returned in the body.
+   - The session keeps only the user's identifier and the CSRF token, never the email or the password.
+   - A wrong password and an unknown email get the same `401` "Invalid email or password.", and the password is checked against a dummy hash when the email is unknown, so neither the answer nor its timing reveals which emails exist (SEC04).
+2. **Using the session.** The browser sends the cookie on every request. The client keeps the CSRF token in memory only, never in `localStorage`, and sends it on every request that changes data. After a page reload, `GET /session` returns the user and the token again (US02 AC10).
+3. **Identity.** Every module takes the current user from the session. No operation accepts a user identifier from the body or the URL as proof of who is asking (NFR03). The project manager and the comment author are worked out by the server.
+4. **Expiry** (PD02, decided 2026-11-11). A session ends after **30 minutes without requests**, and each request renews it. Expired sessions are deleted from the database every minute.
+5. **Log-out** (`DELETE /session`, with the CSRF token). The session is deleted on the server and the cookie is cleared (`Max-Age=0`). Any later request with the old cookie gets `401` "Please log in to continue." (US02 AC02).
+6. **After the session ends** (log-out, expiry, or a cookie the server doesn't know), every protected request gets `401` "Please log in to continue.", **also a request that changes data**: the CSRF token ends with its session, and the user must log in again, not reload. `403` "The request could not be verified. Please reload and try again." is only for a valid session with a missing or wrong token (DoD06). The browser application shows the log-in screen with the message on any `401`.
+
+**Project access** is checked by the Projects module (`ProjectAccess`) for every operation under `/projects/{projectId}`: `404` "Project not found." for a non-member (DoD03), `403` with the story's message for a member who tries a manager-only action. The two `404` answers differ only in `instance`, which repeats the requested path.
+
 **Why a cookie and not a token (e.g. JWT):**
 - **Log-out:** a token stays valid until it expires, unless a list of revoked tokens is kept. With a cookie, log-out works immediately.
 - **Security:** a cookie can be `HttpOnly`, so scripts in the page can't read it, which limits the damage of an XSS bug.

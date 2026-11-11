@@ -1,6 +1,6 @@
 # Matriz — Implementation plan (MVP)
 
-- **Status:** in progress. I0 is done (2026-11-11); I1 is next. The increments and their status are in section 5; update the **Status** column as the work progresses.
+- **Status:** in progress. I0 and I1 are done (2026-11-11); I2 is next. The increments and their status are in section 5; update the **Status** column as the work progresses.
 - **Scope:** the 23 MVP user stories in [user-stories.md](user-stories.md), after the [scope reconciliation](reviews/scope-reconciliation.md).
 - **Prompt:** [docs/prompts/implementation-plan.md](prompts/implementation-plan.md).
 
@@ -16,8 +16,8 @@ Every decision in this plan is marked **Confirmed** (with its source) or **Propo
 | G02 | **No operation listed the eligible assignees.** People can be taken from `GET /projects/{projectId}/members` (only members are eligible, US10). Teams can only be worked out by the client, by comparing `GET /teams` with the member list, and the rule (all team members in the project, D09) would then live in two places. | US10, US13, openapi.yaml | **Resolved (user, Q2):** `GET /projects/{projectId}/eligible-assignees` added to `openapi.yaml` (section 4). |
 | G03 | **No screens designed for log-in, project members, teams, editing a task and editing a project.** The wireframe covers the home dashboard, the board and the task details only. | docs/ui/README.md, "Out of the wireframe" | **Proposed:** build these screens with the same low-fidelity patterns (forms and tables from the wireframe), without a separate wireframe. |
 | G04 | **Demo accounts: number, data and seed mechanism are undefined.** | FR21, US19, PD12, database.md OP5 | Decide with the stack (PD12). **Proposed default:** 3 accounts with made-up names (e.g. Ana Silva, Rui Costa, Sara Lopes, as in the wireframe), passwords read from environment variables at start-up. |
-| G05 | **No session expiry.** Sessions last until log-out and abandoned ones stay in the database. | PD02, ADR-0002 | Not a blocker for the demo. Options in section 1.3. |
-| G06 | **Authentication flow: what the client does after a `401`.** The contract defines the responses, but not that the client goes to the log-in screen and, after logging in, back where the user was. | US02 AC06, DoD02 | **Proposed:** the client sends the user to the log-in screen on any `401`; after logging in it opens the home dashboard (US02 AC01). No API change. |
+| G05 | **No session expiry.** Sessions last until log-out and abandoned ones stay in the database. | PD02, ADR-0002 | **Resolved:** PD02 decided by the user (section 1.3). |
+| G06 | **Authentication flow: what the client does after a `401`.** The contract defines the responses, but not that the client goes to the log-in screen and, after logging in, back where the user was. | US02 AC06, DoD02 | **Resolved in I1:** the client shows the log-in screen with "Please log in to continue." on any `401`; after logging in it opens the home screen (the dashboard from I2, US02 AC01). No API change. |
 | G07 | **A deployment is planned, but the documents assume a local demonstration.** ASM10 says the MVP "is demonstrated on a local server", and 04-solution-architecture section 6 only shows a local environment. A deployment needs HTTPS (SEC08), a hosted database, secrets outside the repository (SEC10) and a place to run the seed. | ASM10, 04-solution-architecture §6, SEC08, SEC10 | **Proposed:** update ASM10 to "deployed on one hosting platform, over HTTPS" and add the deployment to 04 §6, once PD13 is decided (needs approval: constraints and architecture changes). The stack already uses PostgreSQL and a container image for this reason. The deployment plan is left for later (user, Q4). |
 
 ### 1.2 Contradictions and inconsistencies
@@ -36,7 +36,7 @@ Every decision in this plan is marked **Confirmed** (with its source) or **Propo
 | PD | Decision | Blocks | Options and trade-offs |
 |---|---|---|---|
 | PD01 | Technology stack | Everything | **Decided** by the user (section 2). Closing it in constraints.md is proposed. |
-| PD02 | Session expiry | **I1.** Spring Session expires a session after 30 minutes without use by default, so "sessions last until log-out" (ADR-0002) no longer holds once log-in exists. Decide before I1. | (a) No expiry, as today: simplest; abandoned sessions pile up. (b) Fixed idle timeout (e.g. 8 h): one attribute and a clean-up job. (c) Absolute lifetime: same cost, logs out active users. |
+| PD02 | Session expiry — **Decided 2026-11-11: (b), 30 minutes without requests** | **I1.** Spring Session expires a session after 30 minutes without use by default, so "sessions last until log-out" (ADR-0002) no longer holds once log-in exists. Decide before I1. | (a) No expiry, as today: simplest; abandoned sessions pile up. (b) Fixed idle timeout (e.g. 8 h): one attribute and a clean-up job. (c) Absolute lifetime: same cost, logs out active users. |
 | PD03 | Tool for checking module boundaries — **Decided 2026-11-11: Spring Modulith** | Project set-up | (a) Architecture tests in the test suite (e.g. ArchUnit): plain tests, explicit rules. (b) A module framework (e.g. Spring Modulith): checks plus event support, more framework to learn. (c) Package conventions only: no tool, relies on discipline (ADR-0001 asks for an automated check). |
 | PD04 | Foreign keys between modules' data — **Decided 2026-11-11: foreign keys with `ON DELETE RESTRICT`** | Project set-up (schema) | (a) Foreign keys: the database protects integrity; deletes must follow module order. (b) Identifiers only: modules fully independent; integrity relies on the events (R12, R17, R19). |
 | PD05 | Assign and remove a member at the same time | Assigning people (US10) | (a) Lock the membership row while assigning: simple, short waits. (b) Serializable transactions for these two operations: correct, retries needed. (c) Accept the rare race for the demo, documented as a known risk. |
@@ -173,7 +173,7 @@ Nine increments, in about 15 working days (ASM08). Each one ends with a working,
 | # | Increment | Stories | Depends on | Days | Status |
 |---|---|---|---|---|---|
 | I0 | Project set-up | — | — | 1 | Done |
-| I1 | Access: demo accounts, log-in and log-out | US19, US02 | I0 | 1.5 | Not started |
+| I1 | Access: demo accounts, log-in and log-out | US19, US02 | I0 | 1.5 | Done |
 | I2 | Projects and tasks: create, board, home dashboard | US03, US05, US06, US04 | I1 | 2.5 | Not started |
 | I3 | Working on a task: status, editing, details, deleting | US07, US08, US20, US16 | I2 | 2 | Not started |
 | I4 | Project members and assigning people | US09, US10 | I3 | 2 | Not started |
@@ -217,7 +217,7 @@ Nine increments, in about 15 working days (ASM08). Each one ends with a working,
 - **The Teams and Tasks tables were created now**, with the whole schema, as the prompt asked; their behaviour still arrives in I2–I7.
 
 **Left for later:**
-- PD02 (session expiry) must be decided before I1, see section 1.3.
+- PD02 (session expiry) must be decided before I1, see section 1.3. **Decided 2026-11-11.**
 - On the developer's machine, another program uses port 8080, so the check ran on port 8081 (`SERVER_PORT=8081`). The Vite proxy assumes 8080.
 
 ### I1 — Access: demo accounts, log-in and log-out (US19, US02)
@@ -228,6 +228,28 @@ Nine increments, in about 15 working days (ASM08). Each one ends with a working,
 | **Dependencies** | I0. PD06 and PD12 decided. |
 | **Acceptance criteria** | US19 AC01–AC03; US02 AC01–AC10; DoD02, DoD06. Exact messages: "Invalid email or password.", "Email and password are required.", "Please log in to continue.", "The request could not be verified. Please reload and try again." |
 | **Checks** | API tests per AC; AC09 checks both messages are identical; a test that the stored password isn't readable (US19 AC03); a search of the repository for the demo passwords finds nothing (US19 AC02, SEC10); the cookie has `HttpOnly`, `Secure` and `SameSite=Lax`. |
+
+**Done on 2026-11-11.** The prompt is in [docs/prompts/authentication-and-access.md](prompts/authentication-and-access.md).
+
+| Item | Result |
+|---|---|
+| Log-in, current user, log-out | `POST`, `GET` and `DELETE /api/session` in Accounts (`SessionController`). Log-in renews the session identifier and the CSRF token; the session keeps only the user's identifier. Unknown email and wrong password get the same answer, and the password is checked against a dummy hash when the email is unknown. |
+| Web entry | `SecurityConfig`: public files, health check and log-in; everything else needs a session (`401` "Please log in to continue."); CSRF token in `X-CSRF-Token` on every change (`403` "The request could not be verified. Please reload and try again."). Errors as Problem Details; DoD07 (`400` "The request body is not valid.", with unknown fields and wrong JSON types refused). |
+| Access check | `matriz.projects.ProjectAccess` (public interface of Projects, *Is member*): `requireMember` gives `404` "Project not found." to non-members, `requireManager` gives `403` with the story's message (`ManagerOnlyAction`) to members who aren't the manager. The user always comes from the session. Used by every project operation from I2. |
+| Session expiry | PD02: 30 minutes without requests (`application.yaml`). |
+| Browser application | Log-in screen; header with the user's name and **Log out**; on any `401`, back to log-in with "Please log in to continue."; the CSRF token in memory only. The Vite proxy port is configurable (`MATRIZ_API_PORT`). |
+| Documentation | Session lifecycle in [api-contract.md, section 4](api-contract.md#4-authentication) and README.md; PD02 in constraints.md and openapi.yaml. |
+| Checks | `./mvnw verify`: 26 back-end tests (`SessionApiTest` 14, `ProjectAccessTest` 5, and the earlier 7) and 5 front-end tests pass, with `ModularityTest`. Manual check on port 8081, with curl and in a browser, as Ana and as Sara. |
+
+**Differences from the plan above:**
+- **The access check is tested through a test-only endpoint** (`ProjectAccessTest`), because the project operations arrive in I2, I4 and I6. With Ana, Rui and Sara it checks member access, `404` for a non-member, `403` for a member on a manager-only action, and that a user identifier in the request is ignored.
+- **The home screen is a placeholder** with the header only; US02 AC01 ("the home dashboard is shown") is complete when US04 arrives in I2.
+- **Without a valid session, `401` comes before the CSRF check** (approved by the user): after expiry or log-out, a change request gets "Please log in to continue.", not "could not be verified". See api-contract.md, section 4.
+- **No new dependencies:** the back-end tests use real HTTP requests instead of `spring-security-test`.
+
+**Left for later:**
+- **The local `.env` still has the example passwords** copied from `.env.example` in I0, so the search of the repository for the demo passwords (US19 AC02) finds `.env.example`. Replace them in `.env`; the check then finds nothing.
+- ~~PD02 is still described as open in database.md, 04-solution-architecture.md and architecture.md.~~ Updated on 2026-11-11, at the user's request.
 
 ### I2 — Projects and tasks: create, board, home dashboard (US03, US05, US06, US04)
 

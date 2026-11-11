@@ -85,7 +85,7 @@ Technical decisions that are still open. They must be decided, by the user, befo
 | ID | Decision | Where it comes from |
 |---|---|---|
 | PD01 | **Technology stack:** languages, frameworks, database product and how the browser application is built. **Decided 2026-11-11:** see [architecture.md, section 5](architecture.md#5-technology-stack). | C07, architecture.md |
-| PD02 | **Session expiry:** how long a session lasts. Until decided, sessions last until log-out and abandoned sessions stay in the database. | ADR-0002, review-01 S01 |
+| PD02 | **Session expiry:** how long a session lasts. **Decided 2026-11-11:** a session ends after **30 minutes without requests**; every request renews it. Spring Session deletes expired sessions from the database every minute. Set in `application.yaml` (`server.servlet.session.timeout`). Alternatives considered: no expiry (abandoned sessions pile up, a stolen cookie works for ever) and an extra absolute lifetime (needs its own code, logs out active users). | ADR-0002, review-01 S01 |
 | PD03 | **Tool for checking module boundaries** automatically. **Decided 2026-11-11:** Spring Modulith, run as a test in every build. | ADR-0001, 04-solution-architecture open point 3 |
 | PD04 | **References between modules' data:** protected by database rules (foreign keys) or only by identifiers. **Decided 2026-11-11:** foreign keys with `ON DELETE RESTRICT` between modules; within a module, a part is deleted with its whole (e.g. members with their project). | database.md OP1 |
 | PD05 | **Assigning and removing a member at the same time** (US10 AC05): the transaction isolation or ordering that prevents an assignment from surviving a removal. | 04-solution-architecture, risks |

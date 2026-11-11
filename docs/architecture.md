@@ -71,7 +71,7 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
   - the API contract (AS01–AS15).
 - **Pending decisions:** listed in [constraints.md, section 4](constraints.md#4-pending-decisions). The ones that affect the architecture most are:
   - the technology stack (PD01);
-  - session expiry (PD02);
+  - session expiry (PD02, decided 2026-11-11: 30 minutes without requests);
   - the tool for checking module boundaries (PD03);
   - how references between modules' data are protected (PD04);
   - concurrent assignment and removal (PD05).

@@ -102,7 +102,7 @@ flowchart BT
 |---|---|
 | **Responsibility** | Log-in and log-out, the current user, sessions, password protection, user lookup. Its users are the demo accounts created by the seed (FR21, PD12); sign-up is an optional extension (FR01). |
 | **Owns** | Users (name, email, protected password), sessions (stored in the shared database, ADR-0002). |
-| **Rules** | Unique email, compared case-insensitively (FR01, D03). Passwords never stored or shown in readable text (NFR04). Same message for wrong password and unknown email (US02 AC09). Sessions are server-side, identified by an unguessable identifier in a session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), and stored in the shared database, never in an instance's memory (ADR-0001, ADR-0002). Log-in creates the session and issues its CSRF token. The current session returns the logged-in user (US02 AC10). Demo account passwords come from configuration outside the repository (SEC10). Log-out deletes the session, so the cookie stops working immediately (US02 AC02, ADR-0002). No expiry rule yet (section 7, open point 2). |
+| **Rules** | Unique email, compared case-insensitively (FR01, D03). Passwords never stored or shown in readable text (NFR04). Same message for wrong password and unknown email (US02 AC09). Sessions are server-side, identified by an unguessable identifier in a session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), and stored in the shared database, never in an instance's memory (ADR-0001, ADR-0002). Log-in creates the session and issues its CSRF token. The current session returns the logged-in user (US02 AC10). Demo account passwords come from configuration outside the repository (SEC10). Log-out deletes the session, so the cookie stops working immediately (US02 AC02, ADR-0002). A session ends after 30 minutes without requests (PD02; section 7, open point 2). |
 | **Public interface** | *Resolve session* (session cookie → current user or none). *Check CSRF token* (session, token → valid or not). *Find user by email* (email → user identifier, name, email, or "not found"). *Get users* (list of identifiers → names and emails). |
 | **Depends on** | Nothing. |
 | **User stories** | US19, US02 (US01 as an optional extension) |
@@ -304,7 +304,7 @@ Two deployment conditions follow from the session cookie (ADR-0002):
 ### Open points (not resolved here)
 
 1. **FR16 vs NFR03.** FR16 shows users the tasks assigned to their teams. Because of D09, a team can include people who aren't members of the project (US12 AC08), so FR16 could show them tasks from a project they can't access under NFR03. This must be settled before FR16 becomes a user story. Resolved in requirements.md (FR16 is limited to projects the user is a member of).
-2. **Session expiry rule is undefined.** For now, sessions last until the user logs out. ADR-0002 decides the session mechanism and storage but deliberately leaves expiry open. Until it is decided, sessions that are never logged out stay in the database.
+2. **Session expiry rule.** ADR-0002 decided the session mechanism and storage but deliberately left expiry open. Resolved by PD02 ([constraints.md](../constraints.md#4-pending-decisions), decided 2026-11-11): a session ends after 30 minutes without requests, and expired sessions are deleted from the database.
 3. **Tool for enforcing module boundaries:** deferred to the stack phase.
 4. **Scalability isn't a formal NFR yet.** The user may add one later.
 
@@ -313,7 +313,7 @@ Two deployment conditions follow from the session cookie (ADR-0002):
 | Item | Description |
 |---|---|
 | Boundary erosion | Without the automated check (open point 3), modules may start using each other's internals or data. |
-| Session storage | **Resolved by [ADR-0002](adr/ADR-0002-session-cookie-authentication.md).** Server-side sessions identified by a session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), stored in the shared database and owned by Accounts; CSRF token in a request header for data-changing operations; log-out deletes the session (US02 AC02). Expiry is still open (open point 2). |
+| Session storage | **Resolved by [ADR-0002](adr/ADR-0002-session-cookie-authentication.md).** Server-side sessions identified by a session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), stored in the shared database and owned by Accounts; CSRF token in a request header for data-changing operations; log-out deletes the session (US02 AC02). Expiry: 30 minutes without requests (PD02, open point 2). |
 | Membership check and removal at the same time | US10 AC05: an assignment checks membership, and in parallel the manager removes that person. Depending on transaction isolation, the assignment could be saved just after D10 removed the person from the tasks' assignees. The stack phase must choose an isolation or ordering that prevents this. D11 (last write wins) applies to edits of the same task, not to this case. |
 | Module split may change | The four modules mirror the current domain; they may need adjusting as the Should features arrive. |
 | Names for the board and comments | The board and the comments need names from Projects (via Accounts) and Teams. Done naively (one call per task or comment), this could threaten NFR06 later. |

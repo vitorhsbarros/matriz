@@ -1242,7 +1242,8 @@ components:
       description: |
         Session cookie set at log-in. It is `HttpOnly`, `Secure` and
         `SameSite=Lax`. The session is stored on the server, in the shared database, so
-        log-out invalidates it immediately and any instance can serve the request.
+        log-out invalidates it immediately and any instance can serve the request. A session
+        ends after 30 minutes without requests (PD02); each request renews it.
     csrfToken:
       type: apiKey
       in: header

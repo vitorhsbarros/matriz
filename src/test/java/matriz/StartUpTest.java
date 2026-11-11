@@ -10,7 +10,7 @@ import org.springframework.web.client.RestClient;
 
 /**
  * The application starts against PostgreSQL, reports the database as up, serves the browser
- * application, and refuses everything else until log-in exists (I1).
+ * application, and asks for log-in on the API (I1).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfiguration.class)
@@ -27,11 +27,11 @@ class StartUpTest {
     }
 
     @Test
-    void otherRequestsAreRefusedUntilLogInExists() {
+    void theApiAsksForLogInWithoutASession() {
         int status = client().get().uri("/api/projects")
                 .exchange((request, response) -> response.getStatusCode().value());
 
-        assertThat(status).isEqualTo(403);
+        assertThat(status).isEqualTo(401);
     }
 
     private RestClient client() {
