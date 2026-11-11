@@ -214,6 +214,8 @@ A task has zero or more rows in each table. The composite keys make each person 
 | R20 | A task always has a priority, "Medium" by default. | TASK.priority enum, default `MEDIUM`. | FR10, US05 AC02, AC10 |
 | R21 | Every comment belongs to one task and has one author. | COMMENT.task_id and author_id required. | FR23 |
 
+R20 and R21 were added in the [scope reconciliation](reviews/scope-reconciliation.md), after R08–R19, so they come after R07 here but keep their numbers. The numbers aren't changed because other documents refer to them.
+
 **Enforced by the module's business logic:** these rules depend on other data or on the current date, so a single field constraint can't express them.
 
 | # | Rule | Module | Source |
@@ -286,5 +288,5 @@ US01 (optional extension) would use USER.
 | OP1 | **Cross-module references** (dashed lines): are they also protected by foreign keys in the database, or only stored as identifiers? This affects what happens when a referenced row is deleted. | 04-solution-architecture, section 7 |
 | OP2 | **Session expiry:** where sessions are stored is decided (in the database, ADR-0002), but there is no expiry rule yet, so SESSION has no expiry attribute. Sessions last until log-out. | 04-solution-architecture, section 7, open point 2 |
 | OP3 | **Assign and remove at the same time** (US10 AC05): R10 and R12 can conflict if they run in parallel. It may need a transaction isolation choice or a version attribute on TASK. | 04-solution-architecture, section 7 |
-| OP5 | **Seed data:** how the demo USER rows are inserted and where their passwords come from (PD12). | constraints.md PD12 |
 | OP4 | **Deleting data:** resolved. Deleting a project deletes its memberships and tasks (R17), deleting a team deletes its memberships and removes it from its tasks' assignees (R19), deleting a task deletes it with its assignees and comments (R22), and deleting a comment deletes only that comment (US22). Users are never deleted in the MVP (constraints.md, PD07). | requirements.md FR05, FR12, FR20 |
+| OP5 | **Seed data:** how the demo USER rows are inserted and where their passwords come from (PD12). | constraints.md PD12 |
