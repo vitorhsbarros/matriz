@@ -35,7 +35,7 @@ class JdbcTaskCounts {
         }
         jdbc.sql("""
                 select project_id,
-                       count(*) filter (where status = 'TO_DO')       as to_do,
+                       count(*) filter (where status = 'TODO')       as to_do,
                        count(*) filter (where status = 'IN_PROGRESS') as in_progress,
                        count(*) filter (where status = 'DONE')        as done
                 from task where project_id in (:projects)

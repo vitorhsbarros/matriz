@@ -87,7 +87,7 @@ class DashboardApiTest {
     void aRemovedMemberNoLongerSeesTheProjectOrCountsItsTasks() {
         UUID app = fixtures.createProject(otherSession, "App");
         fixtures.addMember(app, marta.id());
-        fixtures.addTasks(app, "TO_DO", 2);
+        fixtures.addTasks(martaSession, app, "TODO", 2);
         assertThat(counts(dashboard(martaSession, null).json().get("totals"))).containsExactly(2, 0, 0);
 
         fixtures.removeMember(app, marta.id());                                                          // AC04
@@ -114,7 +114,7 @@ class DashboardApiTest {
     void projectsWithTheSameNameAreShownSeparately() {
         UUID first = fixtures.createProject(martaSession, "Website");
         UUID second = fixtures.createProject(martaSession, "Website");
-        fixtures.addTasks(first, "DONE", 1);
+        fixtures.addTasks(martaSession, first, "DONE", 1);
 
         JsonNode projects = dashboard(martaSession, null).json().get("projects");                         // AC06
 
@@ -130,12 +130,12 @@ class DashboardApiTest {
     void taskCountsPerProjectAndInTotal() {
         UUID app = fixtures.createProject(martaSession, "App");
         UUID website = fixtures.createProject(martaSession, "Website");
-        fixtures.addTasks(app, "TO_DO", 4);                                                             // AC07
-        fixtures.addTasks(app, "IN_PROGRESS", 1);
-        fixtures.addTasks(app, "DONE", 7);
-        fixtures.addTasks(website, "TO_DO", 3);
-        fixtures.addTasks(website, "IN_PROGRESS", 2);
-        fixtures.addTasks(website, "DONE", 5);
+        fixtures.addTasks(martaSession, app, "TODO", 4);                                                             // AC07
+        fixtures.addTasks(martaSession, app, "IN_PROGRESS", 1);
+        fixtures.addTasks(martaSession, app, "DONE", 7);
+        fixtures.addTasks(martaSession, website, "TODO", 3);
+        fixtures.addTasks(martaSession, website, "IN_PROGRESS", 2);
+        fixtures.addTasks(martaSession, website, "DONE", 5);
 
         JsonNode dashboard = dashboard(martaSession, null).json();
 
@@ -156,10 +156,10 @@ class DashboardApiTest {
     @Test
     void countsReflectOtherMembersChanges() {
         UUID website = fixtures.createProject(martaSession, "Website");
-        UUID task = fixtures.addTask(website, "Test the site", "TO_DO");
+        UUID task = fixtures.addTask(martaSession, website, "Test the site", "TODO");
         assertThat(counts(dashboard(martaSession, null).json().get("totals"))).containsExactly(1, 0, 0);
 
-        fixtures.setStatus(task, "DONE");                                                               // AC09
+        fixtures.setStatus(martaSession, website, task, "DONE");                                                               // AC09
 
         assertThat(counts(dashboard(martaSession, null).json().get("totals"))).containsExactly(0, 0, 1);
     }
@@ -251,12 +251,12 @@ class DashboardApiTest {
         UUID app = fixtures.createProject(martaSession, "App");
         UUID website = fixtures.createProject(martaSession, "Website");
         UUID shop = fixtures.createProject(martaSession, "Web shop");
-        fixtures.addTasks(app, "TO_DO", 1);
-        fixtures.addTasks(website, "TO_DO", 1);
-        fixtures.addTasks(website, "IN_PROGRESS", 1);
-        fixtures.addTasks(shop, "TO_DO", 1);
-        fixtures.addTasks(shop, "IN_PROGRESS", 1);
-        fixtures.addTasks(shop, "DONE", 1);
+        fixtures.addTasks(martaSession, app, "TODO", 1);
+        fixtures.addTasks(martaSession, website, "TODO", 1);
+        fixtures.addTasks(martaSession, website, "IN_PROGRESS", 1);
+        fixtures.addTasks(martaSession, shop, "TODO", 1);
+        fixtures.addTasks(martaSession, shop, "IN_PROGRESS", 1);
+        fixtures.addTasks(martaSession, shop, "DONE", 1);
     }
 
     private Response dashboard(LoggedIn user, String name) {

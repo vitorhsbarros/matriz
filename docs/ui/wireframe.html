@@ -435,8 +435,8 @@ h3.section { margin: 0; font-size: 13px; font-weight: 600; text-transform: upper
 
     if (state.form === "task") {
       html += '<form class="panel" id="task-form" novalidate><h3>New task ' + tag("US05") + "</h3>" +
-        '<div class="field"><label for="task-title">Title</label><input id="task-title" maxlength="200" autocomplete="off"></div>' +
-        '<div class="field"><label for="task-description">Description (optional)</label><textarea id="task-description" rows="2" maxlength="5000"></textarea></div>' +
+        '<div class="field"><label for="task-title">Title</label><input id="task-title" maxlength="150" autocomplete="off"></div>' +
+        '<div class="field"><label for="task-description">Description (optional)</label><textarea id="task-description" rows="2" maxlength="2000"></textarea></div>' +
         '<div class="field"><label for="task-due">Due date (optional)</label><input id="task-due" type="date"></div>' +
         '<div class="field"><label for="task-priority">Priority</label><select id="task-priority">' +
         priorities.map(function (x) { return "<option" + (x === "Medium" ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></div>" +
@@ -493,7 +493,8 @@ h3.section { margin: 0; font-size: 13px; font-weight: 600; text-transform: upper
     html += '<div class="detail"><div class="detail-main">' +
       '<dl class="facts">' +
       "<dt>Description</dt><dd>" + (t.description ? esc(t.description) : '<span class="muted">No description</span>') + "</dd>" +
-      "<dt>Status</dt><dd>" + esc(t.status) + " " + tag("US07") + "</dd>" +
+      '<dt>Status</dt><dd><select id="detail-status" aria-label="Status">' +
+      statuses.map(function (x) { return "<option" + (x === t.status ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select> " + tag("US07") + "</dd>" +
       '<dt>Priority</dt><dd><select id="detail-priority" aria-label="Priority">' +
       priorities.map(function (x) { return "<option" + (x === t.priority ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select> " + tag("US08") + "</dd>" +
       "<dt>Due date</dt><dd>" + (t.due ? esc(t.due) : '<span class="muted">No due date</span>') + "</dd>" +
@@ -676,6 +677,7 @@ h3.section { margin: 0; font-size: 13px; font-weight: 600; text-transform: upper
       render(); return;
     }
     if (e.target.id === "detail-priority") { task().priority = e.target.value; render(); }
+    if (e.target.id === "detail-status") { task().status = e.target.value; render(); }
   });
 
   screen.addEventListener("submit", function (e) {
@@ -690,6 +692,7 @@ h3.section { margin: 0; font-size: 13px; font-weight: 600; text-transform: upper
     if (e.target.id === "task-form") {
       var title = document.getElementById("task-title").value.trim();
       if (!title) { state.error = "Task title is required."; render(); return; }
+      if (title.length < 3) { state.error = "Task title must be at least 3 characters."; render(); return; }
       project().tasks.push({ id: nextId, created: nextId, title: title, status: "To do", assignees: [],
         priority: document.getElementById("task-priority").value,
         description: document.getElementById("task-description").value.trim(),

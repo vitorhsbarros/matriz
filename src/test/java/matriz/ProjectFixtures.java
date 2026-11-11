@@ -7,8 +7,8 @@ import matriz.ApiClient.Response;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * Data the project tests need but that no API operation creates yet: memberships (US09, I5), tasks (US05, I3),
- * assignees and comments. Written straight into the tables, with made-up content (PRI05).
+ * Test data, with made-up content (PRI05). Projects and tasks are created through the API; memberships
+ * (US09, I4), assignees and comments have no API operation yet, so they are written straight into the tables.
  */
 final class ProjectFixtures {
 
@@ -38,23 +38,34 @@ final class ProjectFixtures {
         jdbc.sql("delete from project_member where project_id = ? and user_id = ?").params(projectId, userId).update();
     }
 
-    /** Adds {@code count} tasks with the given status ({@code TO_DO}, {@code IN_PROGRESS} or {@code DONE}). */
-    void addTasks(UUID projectId, String status, int count) {
+    /** Adds {@code count} tasks with the given status ({@code TODO}, {@code IN_PROGRESS} or {@code DONE}). */
+    void addTasks(LoggedIn user, UUID projectId, String status, int count) {
         for (int i = 0; i < count; i++) {
-            addTask(projectId, "Task " + i, status);
+            addTask(user, projectId, "Task " + i, status);
         }
     }
 
-    UUID addTask(UUID projectId, String title, String status) {
-        UUID id = UUID.randomUUID();
-        jdbc.sql("insert into task (id, project_id, title, status) values (?, ?, ?, ?)")
-                .params(id, projectId, title, status)
-                .update();
+    /** Creates a task through the API, as the logged-in member, and moves it to {@code status}. */
+    UUID addTask(LoggedIn user, UUID projectId, String title, String status) {
+        Response created = api.send("POST", "/api/projects/" + projectId + "/tasks",
+                ApiClient.json(Map.of("title", title)), user.cookie(), user.csrfToken());
+        if (created.status() != 201) {
+            throw new IllegalStateException("Task not created: " + created.status() + " " + created.body());
+        }
+        UUID id = UUID.fromString(created.json().get("id").asString());
+        if (!"TODO".equals(status)) {
+            setStatus(user, projectId, id, status);
+        }
         return id;
     }
 
-    void setStatus(UUID taskId, String status) {
-        jdbc.sql("update task set status = ? where id = ?").params(status, taskId).update();
+    /** Changes a task's status through the API (US07). */
+    void setStatus(LoggedIn user, UUID projectId, UUID taskId, String status) {
+        Response moved = api.send("PATCH", "/api/projects/" + projectId + "/tasks/" + taskId,
+                ApiClient.json(Map.of("status", status)), user.cookie(), user.csrfToken());
+        if (moved.status() != 200) {
+            throw new IllegalStateException("Status not changed: " + moved.status() + " " + moved.body());
+        }
     }
 
     void assignUser(UUID taskId, UUID userId) {

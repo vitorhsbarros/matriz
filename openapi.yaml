@@ -824,7 +824,7 @@ paths:
       operationId: createTask
       summary: Create a task in a project
       description: |
-        Creates a task in the project. The task starts in the `TO_DO` status, with no
+        Creates a task in the project. The task starts in the `TODO` status, with no
         assignees and, if no priority is given, the priority `MEDIUM`. User story: US05.
       requestBody:
         required: true
@@ -852,7 +852,7 @@ paths:
                 title: Design home page
                 description: Follow the style guide
                 dueDate: '2026-11-20'
-                status: TO_DO
+                status: TODO
                 priority: HIGH
                 assignees: []
                 createdAt: '2026-11-02T10:15:30Z'
@@ -1388,8 +1388,9 @@ components:
             $ref: '#/components/schemas/Problem'
           examples:
             titleRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title is required."}}
-            titleTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title must be at most 200 characters."}}
-            descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 5000 characters."}}
+            titleTooShort: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title must be at least 3 characters."}}
+            titleTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title must be at most 150 characters."}}
+            descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
             dueDateInPast: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
             dueDateInvalid: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Enter a valid date."}}
             invalidPriority: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
@@ -1408,7 +1409,7 @@ components:
 
     TaskStatus:
       type: string
-      enum: [TO_DO, IN_PROGRESS, DONE]
+      enum: [TODO, IN_PROGRESS, DONE]
       description: Status of a task (FR13). The interface shows "To do", "In progress" and "Done".
 
     TaskPriority:
@@ -1618,13 +1619,13 @@ components:
       properties:
         title:
           type: string
-          minLength: 1
-          maxLength: 200
-          description: Required. 1–200 characters after trimming.
+          minLength: 3
+          maxLength: 150
+          description: Required. 3–150 characters after trimming.
         description:
           type: [string, 'null']
-          maxLength: 5000
-          description: Optional. Up to 5000 characters after trimming.
+          maxLength: 2000
+          description: Optional. Up to 2000 characters after trimming.
         dueDate:
           type: [string, 'null']
           format: date
@@ -1641,11 +1642,11 @@ components:
       properties:
         title:
           type: string
-          minLength: 1
-          maxLength: 200
+          minLength: 3
+          maxLength: 150
         description:
           type: [string, 'null']
-          maxLength: 5000
+          maxLength: 2000
         dueDate:
           type: [string, 'null']
           format: date

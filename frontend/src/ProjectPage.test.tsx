@@ -3,6 +3,8 @@ import { afterEach, expect, test, vi } from "vitest";
 import { ProjectPage } from "./ProjectPage";
 import { fakeApi } from "./testApi";
 
+const noTasks = { status: 200, body: [] };
+
 const website = { id: "p-website", name: "Website", description: "New company website", role: "MANAGER" };
 
 afterEach(() => {
@@ -11,7 +13,8 @@ afterEach(() => {
 });
 
 test("the manager sees the project with Edit and Delete project", async () => {
-  fakeApi({ "GET /api/projects/p-website": [{ status: 200, body: website }] });
+  fakeApi({ "GET /api/projects/p-website": [{ status: 200, body: website }],
+    "GET /api/projects/p-website/tasks": [noTasks] });
   render(<ProjectPage projectId="p-website" onLeave={() => {}} />);
 
   expect(await screen.findByRole("heading", { name: "Website" })).toBeDefined();
@@ -22,7 +25,8 @@ test("the manager sees the project with Edit and Delete project", async () => {
 });
 
 test("a member sees neither Edit nor Delete project (US14 AC04, US15 AC04)", async () => {
-  fakeApi({ "GET /api/projects/p-website": [{ status: 200, body: { ...website, role: "MEMBER" } }] });
+  fakeApi({ "GET /api/projects/p-website": [{ status: 200, body: { ...website, role: "MEMBER" } }],
+    "GET /api/projects/p-website/tasks": [noTasks] });
   render(<ProjectPage projectId="p-website" onLeave={() => {}} />);
 
   expect(await screen.findByText("Member")).toBeDefined();
@@ -40,6 +44,7 @@ test("a project the user can't access shows the API's message (DoD03)", async ()
 test("editing saves both fields and shows the API's message on failure (US14)", async () => {
   const api = fakeApi({
     "GET /api/projects/p-website": [{ status: 200, body: website }],
+    "GET /api/projects/p-website/tasks": [noTasks],
     "PATCH /api/projects/p-website": [
       { status: 422, body: { status: 422, detail: "Project name is required." } },
       { status: 200, body: { ...website, name: "Company website", description: null } },
@@ -64,6 +69,7 @@ test("editing saves both fields and shows the API's message on failure (US14)", 
 test("deleting asks for confirmation, then leaves the project (US15 AC01, AC02)", async () => {
   const api = fakeApi({
     "GET /api/projects/p-website": [{ status: 200, body: website }],
+    "GET /api/projects/p-website/tasks": [noTasks],
     "DELETE /api/projects/p-website": [{ status: 204 }],
   });
   const onLeave = vi.fn();

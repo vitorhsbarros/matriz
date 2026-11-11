@@ -17,10 +17,10 @@ The wireframe was generated with an AI tool (Claude), from the user stories, the
 - **Show empty state:** switches the current screen between its version with data and its empty version (no projects, no tasks, or no comments). *Intranet* has no tasks, so it always opens in the empty state.
 - **Story labels:** shows or hides the dark labels (US04, US05 …) that link each element to its user story. They are annotations, not part of the interface.
 - **Search:** type in **Search projects** to narrow the list. The totals don't change (D14).
-- **Board:** drag a card to another column, or use its ← → buttons, to change the task's status. Tick statuses and priorities to filter the board.
+- **Board:** drag a card to another column, or use its ← → buttons, to change the task's status. Tick statuses and priorities to filter the board. The status can also be changed in the task's details.
 - **Task details:** add or remove assignees (people and teams), change the priority, and add comments. Ana can edit and delete her own comments only.
 - **Delete:** *Delete* on a project (manager only), a task or one of Ana's comments asks for confirmation on the page first, then removes it.
-- **Forms:** *New project*, *New task* and the comment form work inside the wireframe. Submitting an empty name, title or comment shows the exact error message from the user stories.
+- **Forms:** *New project*, *New task* and the comment form work inside the wireframe. Submitting an empty name, title or comment, or a task title shorter than 3 characters, shows the exact error message from the user stories. The task form takes up to 150 characters in the title and 2000 in the description (US05, changed on 2026-11-11).
 
 ## Screens and navigation
 
@@ -78,7 +78,7 @@ The project's tasks are shown as a **board** with one column per status: **To do
 | Element | User story | Acceptance criteria |
 |---|---|---|
 | Links back to **My projects** and to the project's board | US20 | — (navigation) |
-| Title, description ("No description" when empty), status, priority and due date | US20 | AC01, AC04 |
+| Title, description ("No description" when empty), status (changeable), priority and due date | US20, US07 | US20 AC01, AC04 |
 | **Priority** selector | US08 | AC01 |
 | **Assignees**: people and teams ("Design (team)"), each with × to remove it; a selector and **Assign** to add one | US10, US13 | US10 AC01–AC03, AC10; US13 AC01–AC03 |
 | **Comments** from oldest to newest, with author, date and time, and "(edited)" | US21, US22 | US21 AC01, AC02; US22 AC01 |

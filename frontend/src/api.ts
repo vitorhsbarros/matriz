@@ -118,3 +118,61 @@ export async function updateProject(id: string, name: string, description: strin
 export async function deleteProject(id: string): Promise<void> {
   await callLoggedIn<void>("DELETE", `/projects/${encodeURIComponent(id)}`);
 }
+
+// ---------------------------------------------------------------- tasks (US05–US08, US16, US20, US24)
+
+export type Status = "TODO" | "IN_PROGRESS" | "DONE";
+export type Priority = "LOW" | "MEDIUM" | "HIGH";
+export const STATUSES: Status[] = ["TODO", "IN_PROGRESS", "DONE"];
+export const PRIORITIES: Priority[] = ["LOW", "MEDIUM", "HIGH"];
+export const STATUS_LABEL: Record<Status, string> = { TODO: "To do", IN_PROGRESS: "In progress", DONE: "Done" };
+export const PRIORITY_LABEL: Record<Priority, string> = { LOW: "Low", MEDIUM: "Medium", HIGH: "High" };
+
+export type Task = {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string | null;
+  dueDate: string | null;
+  status: Status;
+  priority: Priority;
+  assignees: unknown[];
+  createdAt: string;
+};
+
+/** The fields of the task form; an empty description or due date means none. */
+export type TaskInput = { title: string; description: string; dueDate: string; priority: Priority };
+
+const tasksPath = (projectId: string) => `/projects/${encodeURIComponent(projectId)}/tasks`;
+const taskPath = (projectId: string, taskId: string) => `${tasksPath(projectId)}/${encodeURIComponent(taskId)}`;
+
+/** The project's tasks, newest first; each filter may hold several values (US24, AS17). */
+export async function listTasks(projectId: string, statuses: Status[] = [], priorities: Priority[] = []) {
+  const query = new URLSearchParams();
+  statuses.forEach((status) => query.append("status", status));
+  priorities.forEach((priority) => query.append("priority", priority));
+  const suffix = query.toString() === "" ? "" : `?${query}`;
+  return (await callLoggedIn<Task[]>("GET", `${tasksPath(projectId)}${suffix}`))!;
+}
+
+export async function createTask(projectId: string, input: TaskInput): Promise<Task> {
+  return (await callLoggedIn<Task>("POST", tasksPath(projectId), {
+    title: input.title,
+    description: input.description,
+    dueDate: input.dueDate === "" ? null : input.dueDate,
+    priority: input.priority,
+  }))!;
+}
+
+export async function getTask(projectId: string, taskId: string): Promise<Task> {
+  return (await callLoggedIn<Task>("GET", taskPath(projectId, taskId)))!;
+}
+
+/** Changes only the fields given; `null` clears the description or the due date (US08). */
+export async function updateTask(projectId: string, taskId: string, fields: Record<string, string | null>) {
+  return (await callLoggedIn<Task>("PATCH", taskPath(projectId, taskId), fields))!;
+}
+
+export async function deleteTask(projectId: string, taskId: string): Promise<void> {
+  await callLoggedIn<void>("DELETE", taskPath(projectId, taskId));
+}

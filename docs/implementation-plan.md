@@ -1,6 +1,6 @@
 # Matriz — Implementation plan (MVP)
 
-- **Status:** in progress. I0, I1 and I2 are done (2026-11-11); I3 is next. The increments and their status are in section 5; update the **Status** column as the work progresses.
+- **Status:** in progress. I0 to I3 are done (2026-11-11); I4 is next. The increments and their status are in section 5; update the **Status** column as the work progresses.
 - **Scope:** the 23 MVP user stories in [user-stories.md](user-stories.md), after the [scope reconciliation](reviews/scope-reconciliation.md).
 - **Prompt:** [docs/prompts/implementation-plan.md](prompts/implementation-plan.md).
 
@@ -166,7 +166,7 @@ The contract in [openapi.yaml](../openapi.yaml) and [api-contract.md](api-contra
 
 ## 5. Increments
 
-Nine increments, in about 15 working days (ASM08). Each one ends with a working, demonstrable application. The order follows the backlog where possible; the differences are explained under the table.
+Seven increments, in about 15 working days (ASM08). Each one ends with a working, demonstrable application. The order follows the backlog where possible; the differences are explained under the table.
 
 **Estimates and the order are Proposed.** The stories, their acceptance criteria and the architecture they follow are Confirmed (user-stories.md, ADR-0001, ADR-0002).
 
@@ -175,22 +175,22 @@ Nine increments, in about 15 working days (ASM08). Each one ends with a working,
 | I0 | Project set-up | — | — | 1 | Done |
 | I1 | Access: demo accounts, log-in and log-out | US19, US02 | I0 | 1.5 | Done |
 | I2 | Project management: create, home dashboard, search, edit, delete | US03, US04, US23, US14, US15 | I1 | 3 | Done |
-| I3 | Tasks and the board | US05, US06 | I2 | 1 | Not started |
-| I4 | Working on a task: status, editing, details, deleting | US07, US08, US20, US16 | I3 | 2 | Not started |
-| I5 | Project members and assigning people | US09, US10 | I4 | 2 | Not started |
-| I6 | Teams and assigning teams | US11, US12, US13, US17, US18 | I5 | 2.5 | Not started |
-| I7 | Comments | US21, US22 | I4 | 1.5 | Not started |
-| I8 | Board filters | US24 | I3 | 0.5 | Not started |
+| I3 | Tasks: board, create, status, edit, details, delete, filters | US05, US06, US07, US08, US20, US16, US24 | I2 | 3.5 | Done |
+| I4 | Project members and assigning people | US09, US10 | I3 | 2 | Not started |
+| I5 | Teams and assigning teams | US11, US12, US13, US17, US18 | I4 | 2.5 | Not started |
+| I6 | Comments | US21, US22 | I3 | 1.5 | Not started |
 | | **Total** | **23 stories** | | **15** | |
 
 **Order changed on 2026-11-11** (user's decision, [docs/prompts/project-management.md](prompts/project-management.md)): the whole project management comes first, as the first complete path between the interface, the API and the database. US14 and US15 moved from the old I6, US23 from the old I8, and US05 and US06 moved from I2 to I3. The later increments were renumbered (old I3–I5 are now I4–I6). The total stays 15 days.
 
+**Order changed again on 2026-11-11** (user's decision, [docs/prompts/task-management.md](prompts/task-management.md)): all the work on a project's tasks is one increment, I3, which merges the previous I3 (US05, US06), I4 (US07, US08, US20, US16) and I8 (US24). Members, teams and comments are now I4, I5 and I6. The total stays 15 days.
+
 **Differences from the backlog order:**
 - **US04 before US05:** the dashboard is built with the projects. Its task counts are zero until tasks exist (I3); the counts were tested with tasks written straight into the database.
-- **US20 and US16 in I4:** the task details screen is where editing (US08) and deleting happen, so they're built together.
+- **US20, US16 and US24 with the other task stories (I3):** the board, the details, editing, deleting and filtering act on the same tasks and screens, so they're built together.
 - **US14 and US15 with the other project operations (I2),** instead of after the teams.
 
-**Risk:** the 15 days leave no margin (ASM08). If time runs short, the increment that can move to the end or be cut first is I8, which doesn't block any other increment.
+**Risk:** the 15 days leave no margin (ASM08). If time runs short, the increment that can move to the end or be cut first is I6 (comments), which doesn't block any other increment.
 
 ### I0 — Project set-up
 
@@ -283,61 +283,63 @@ Nine increments, in about 15 working days (ASM08). Each one ends with a working,
 - **No new dependencies:** navigation uses the address's `#`, without a router library.
 - **Tests write memberships and tasks straight into the database,** because their operations arrive in I3 and I5.
 
-### I3 — Tasks and the board (US05, US06)
+### I3 — Tasks: board, create, status, edit, details, delete, filters (US05, US06, US07, US08, US20, US16, US24)
 
 | | |
 |---|---|
-| **Components and files** | `tasks`: TASK with status and priority, `createTask`, `listProjectTasks` (without filters yet). Browser application: the board with three columns and cards on the project screen, **New task**. |
+| **Components and files** | `tasks`: `createTask`, `listProjectTasks` (with the `status` and `priority` filters), `getTask`, `updateTask` (fields, status, priority), `deleteTask` (R22). Browser application: the board on the project screen (three columns with counts, cards, **New task**, ← → and drag and drop, the filters with **Clear filters**), the task details screen (wireframe screen 3, without assignees and comments yet), the edit form, delete with confirmation. |
 | **Dependencies** | I2. |
-| **Acceptance criteria** | US05 AC01–AC10; US06 AC01–AC06; US04 AC02 (open the board). |
-| **Checks** | API tests per AC; a non-member gets "Project not found." (DoD03); the dashboard counts follow the tasks created (US04 AC07); the screen matches the wireframe's screen 2. |
+| **Acceptance criteria** | US05 AC01–AC10; US06 AC01–AC06 (assignees from I4); US07 AC01–AC08; US08 AC01–AC10; US20 AC01–AC04 (assignees and comments from I4–I6); US16 AC01–AC07; US24 AC01–AC06; US04 AC02 (open the board); DoD02–DoD07. |
+| **Checks** | API tests per AC; a non-member gets "Project not found." and a task of another project "Task not found." (DoD03, DoD05); the last saved change wins (D11); the dashboard counts follow the tasks (US04 AC07); the confirmation text is exact (NFR05). |
 
-### I4 — Working on a task: status, editing, details, deleting (US07, US08, US20, US16)
+**Done on 2026-11-11.** The prompt is in [docs/prompts/task-management.md](prompts/task-management.md).
 
-| | |
+| Item | Result |
 |---|---|
-| **Components and files** | `tasks`: `updateTask` (status, fields, priority), `getTask`, `deleteTask` (R22). Browser application: drag and drop and ← → on the board, task details screen (wireframe screen 3, without comments and assignees yet), edit form, delete with confirmation. |
-| **Dependencies** | I3. |
-| **Acceptance criteria** | US07 AC01–AC08; US08 AC01–AC10; US20 AC01–AC04; US16 AC01–AC07; DoD05. |
-| **Checks** | API tests per AC; last saved change wins (D11); a deleted task gets "Task not found." (DoD05); the confirmation text is exact (NFR05). |
+| Task fields | Changed by the user before this increment: title 3–150 characters, description up to 2000, status value `TODO` (was 1–200, 5000 and `TO_DO`). Updated in US05, `openapi.yaml`, api-contract.md, database.md, and the migration `tasks/V4_1__task_limits.sql`; new message "Task title must be at least 3 characters.". |
+| Tasks | `TasksController`, `JdbcTasks` and `TaskFields`: every operation checks membership first (`ProjectAccess`), then the task in that project. Status, priority and due date are read as text and checked by the code, so wrong values get the stories' messages (`422`), not `400`. "Today" comes from a `Clock` (AS11). A past due date that isn't changed stays valid (D12). The list is newest first and filtered with repeated parameters (AS17). |
+| Browser application | `Board` on the project screen, `TaskPage` at `#/projects/<id>/tasks/<id>`, `TaskForm`, and `ConfirmDelete` shared by projects and tasks. After each change the board is read again, so columns and counts are right without a reload; the dashboard reads its counts each time it opens. |
+| Checks | `./mvnw verify`: 116 back-end tests (`TasksApiTest` 49, a new check of the task limits in `PersistenceSetupTest`, and the earlier 66) and 28 front-end tests pass, with `ModularityTest`. Manual check on port 8081 in a browser: create two tasks, move one with → and by drag and drop, filter by High, edit with an error then save, reload the details, delete with the confirmation, see the dashboard counts, restart the back end, see the task again; Sara gets "Project not found.". |
 
-### I5 — Project members and assigning people (US09, US10)
+**Differences from the plan above:**
+- **Gaps resolved with the user's approval:**
+  - a task identifier that isn't a UUID gets "Task not found." (as AS19);
+  - `PATCH` with `{}` changes nothing (AS20);
+  - `"status": null` or `"priority": null` gets "Invalid status." or "Invalid priority."; only the description and due date can be cleared;
+  - a badly formatted date gets "Enter a valid date.".
+- **The details have no comments yet** (US20 AC01 and AC04 are complete with I6), and every task shows "Unassigned" until I4 and I5.
+- **The cards also have Delete**, as in the wireframe, with the same confirmation as the details.
+- **The status can be changed in the details too,** with a status list, besides the board's ← → and drag and drop.
+- **Test helpers create tasks through the API;** memberships, assignees and comments are still written straight into the database.
+
+### I4 — Project members and assigning people (US09, US10)
 
 | | |
 |---|---|
 | **Components and files** | `projects`: `listProjectMembers`, `addProjectMember`, `removeProjectMember`, the *member removed* event (D10), *Get members*, *Get user names*. `tasks`: TASK_ASSIGNEE_USER, `addTaskAssignee` (people), `removeTaskUserAssignee`, `listEligibleAssignees` (people), handler of *member removed* (R12). Browser application: members screen, assignees on the task details and the cards. |
-| **Dependencies** | I4. PD05 decided. |
+| **Dependencies** | I3. PD05 decided. |
 | **Acceptance criteria** | US09 AC01–AC11; US10 AC01–AC10; SEC09 ("This user could not be added."). |
 | **Checks** | API tests per AC; removing a member and its tasks' assignees happen in one transaction, and a failing handler rolls both back (04-solution-architecture §4.2); a test for the concurrency rule chosen in PD05. |
 
-### I6 — Teams and assigning teams (US11, US12, US13, US17, US18)
+### I5 — Teams and assigning teams (US11, US12, US13, US17, US18)
 
 | | |
 |---|---|
 | **Components and files** | `teams`: TEAM, TEAM_MEMBER, `listTeams`, `createTeam`, `renameTeam`, `deleteTeam`, `addTeamMember`, `removeTeamMember`, the *team deleted* event. `tasks`: TASK_ASSIGNEE_TEAM, team assignment in `addTaskAssignee`, `removeTaskTeamAssignee`, teams in `listEligibleAssignees` (D09), handler of *team deleted* (R19). Browser application: teams screen. |
-| **Dependencies** | I5. PD11 decided, or D05 kept. |
+| **Dependencies** | I4. PD11 decided, or D05 kept. |
 | **Acceptance criteria** | US11 AC01–AC05; US12 AC01–AC11; US13 AC01–AC09; US17 AC01–AC07; US18 AC01–AC07. |
 | **Checks** | API tests per AC; team names are unique ignoring case and spaces (D06); team membership gives no project access (US12 AC08). |
 
-### I7 — Comments (US21, US22)
+### I6 — Comments (US21, US22)
 
 | | |
 |---|---|
 | **Components and files** | `tasks`: COMMENT, `listTaskComments`, `addTaskComment`, `editTaskComment`, `deleteTaskComment`; authors' names through *Get user names* (D13). Browser application: comments on the task details screen, edit and delete for the author's own comments. |
-| **Dependencies** | I4 (task details). Uses *Get user names* from I5. |
+| **Dependencies** | I3 (task details). Uses *Get user names* from I4. |
 | **Acceptance criteria** | US21 AC01–AC07; US22 AC01–AC08; SEC11. |
 | **Checks** | API tests per AC; the manager gets "Only the author can change this comment." (US22 AC05); a removed member's comment keeps the name (US21 AC06). |
 
-### I8 — Board filters (US24)
-
-| | |
-|---|---|
-| **Components and files** | `tasks`: `?status=` and `?priority=` on `listProjectTasks`. Browser application: filter chips on the board. The dashboard search (US23) was done in I2. |
-| **Dependencies** | I3. |
-| **Acceptance criteria** | US24 AC01–AC06. |
-| **Checks** | API tests per AC; an invalid filter value returns "Invalid priority." or "Invalid status." |
-
-**I5 is listed before I7, but I7 needs only I4 and *Get user names*.** If I7 is done before I5, *Get user names* is built in I7 instead.
+**I4 is listed before I6, but I6 needs only I3 and *Get user names*.** If I6 is done before I4, *Get user names* is built in I6 instead.
 
 ## 6. Operations per increment
 
@@ -345,12 +347,10 @@ Nine increments, in about 15 working days (ASM08). Each one ends with a working,
 |---|---|
 | I1 | `logIn`, `getSession`, `logOut` |
 | I2 | `createProject`, `getProject`, `updateProject`, `deleteProject`, `listMyProjects` (with `name`) |
-| I3 | `createTask`, `listProjectTasks` |
-| I4 | `updateTask`, `getTask`, `deleteTask` |
-| I5 | `listProjectMembers`, `addProjectMember`, `removeProjectMember`, `listEligibleAssignees`, `addTaskAssignee`, `removeTaskUserAssignee` |
-| I6 | `listTeams`, `createTeam`, `renameTeam`, `deleteTeam`, `addTeamMember`, `removeTeamMember`, `removeTaskTeamAssignee` |
-| I7 | `listTaskComments`, `addTaskComment`, `editTaskComment`, `deleteTaskComment` |
-| I8 | (extends `listProjectTasks`) |
+| I3 | `createTask`, `listProjectTasks` (with `status` and `priority`), `getTask`, `updateTask`, `deleteTask` |
+| I4 | `listProjectMembers`, `addProjectMember`, `removeProjectMember`, `listEligibleAssignees`, `addTaskAssignee`, `removeTaskUserAssignee` |
+| I5 | `listTeams`, `createTeam`, `renameTeam`, `deleteTeam`, `addTeamMember`, `removeTeamMember`, `removeTaskTeamAssignee` |
+| I6 | `listTaskComments`, `addTaskComment`, `editTaskComment`, `deleteTaskComment` |
 
 ## 7. Keeping this plan up to date
 

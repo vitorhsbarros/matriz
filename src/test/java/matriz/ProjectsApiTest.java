@@ -335,8 +335,8 @@ class ProjectsApiTest {
         UUID project = fixtures.createProject(ownerSession, "Website");
         TestUser member = TestUsers.create(jdbc, encoder, "Rita Melo");
         fixtures.addMember(project, member.id());
-        UUID testTheSite = fixtures.addTask(project, "Test the site", "TO_DO");
-        UUID createLogo = fixtures.addTask(project, "Create logo", "IN_PROGRESS");
+        UUID testTheSite = fixtures.addTask(ownerSession, project, "Test the site", "TODO");
+        UUID createLogo = fixtures.addTask(ownerSession, project, "Create logo", "IN_PROGRESS");
         fixtures.assignUser(testTheSite, member.id());
         UUID design = fixtures.assignNewTeam(createLogo, member.id());
         fixtures.addComment(createLogo, member.id(), "Use the new colours");

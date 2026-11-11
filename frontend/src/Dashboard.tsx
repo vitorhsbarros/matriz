@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, createProject, getDashboard, ProjectDashboard, ProjectSummary, TaskCounts } from "./api";
-import { ConfirmDelete } from "./ConfirmDelete";
+import { ApiError, createProject, deleteProject, getDashboard, ProjectDashboard, ProjectSummary, TaskCounts } from "./api";
+import { ConfirmDelete, deleteProjectMessage } from "./ConfirmDelete";
 import { ProjectForm } from "./ProjectForm";
 
 export const ROLE_LABEL = { MANAGER: "Manager", MEMBER: "Member" } as const;
@@ -68,7 +68,8 @@ export function Dashboard() {
       </p>
 
       {deleting && (
-        <ConfirmDelete project={deleting}
+        <ConfirmDelete message={deleteProjectMessage(deleting.name)} confirmLabel="Delete project"
+          onConfirm={() => deleteProject(deleting.id)}
           onDeleted={() => { setDeleting(null); load(search); }}
           onCancel={() => setDeleting(null)} />
       )}

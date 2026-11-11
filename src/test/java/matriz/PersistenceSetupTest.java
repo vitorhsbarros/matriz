@@ -1,9 +1,12 @@
 package matriz;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import org.springframework.dao.DataAccessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
@@ -89,6 +92,33 @@ class PersistenceSetupTest {
             assertThat(hash).startsWith("{bcrypt}");
             assertThat(hash).doesNotContain("test-password");
         });
+    }
+
+    @Test
+    void theTaskTableEnforcesTheTaskLimits() {
+        // Task limits decided on 2026-11-11 (US05, V4_1): title 3–150, description up to 2000, and a new task
+        // starts in the status value "TODO" ("To do" in the interface).
+        UUID website = UUID.fromString("5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10");
+        UUID valid = UUID.randomUUID();
+        jdbc.sql("insert into task (id, project_id, title, description) values (?, ?, ?, ?)")
+                .params(valid, website, "W".repeat(150), "d".repeat(2000))
+                .update();
+
+        assertThat(jdbc.sql("select status from task where id = ?").param(valid).query(String.class).single())
+                .isEqualTo("TODO");
+        for (List<String> invalid : List.of(
+                List.of("Wd", "description"),
+                List.of("W".repeat(151), "description"),
+                List.of("Valid title", "d".repeat(2001)))) {
+            assertThatThrownBy(() -> jdbc.sql("insert into task (id, project_id, title, description) values (?, ?, ?, ?)")
+                    .params(UUID.randomUUID(), website, invalid.get(0), invalid.get(1))
+                    .update())
+                    .isInstanceOf(DataAccessException.class);
+        }
+        assertThatThrownBy(() -> jdbc.sql("update task set status = 'TO_DO' where id = ?").param(valid).update())
+                .isInstanceOf(DataAccessException.class);
+
+        jdbc.sql("delete from task where id = ?").param(valid).update();
     }
 
     private Map<String, Integer> rowCounts() {

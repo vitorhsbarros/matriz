@@ -3,6 +3,7 @@ import { ApiError, currentSession, logOut, Session, whenLoggedOut } from "./api"
 import { Dashboard } from "./Dashboard";
 import { LogInPage } from "./LogInPage";
 import { ProjectPage } from "./ProjectPage";
+import { TaskPage } from "./TaskPage";
 
 const PLEASE_LOG_IN = "Please log in to continue.";
 
@@ -11,20 +12,28 @@ type State =
   | { screen: "logIn"; notice: string | null }
   | { screen: "app"; session: Session; error: string | null };
 
-/** The screen is kept in the address (#/projects/<id>), so a reload stays where the user was. */
-function projectInAddress(): string | null {
-  const match = /^#\/projects\/([^/]+)$/.exec(window.location.hash);
-  return match ? decodeURIComponent(match[1]) : null;
+type Place = { projectId: string | null; taskId: string | null };
+
+/**
+ * The screen is kept in the address (#/projects/<id> or #/projects/<id>/tasks/<id>), so a reload stays where
+ * the user was.
+ */
+function placeInAddress(): Place {
+  const match = /^#\/projects\/([^/]+)(?:\/tasks\/([^/]+))?$/.exec(window.location.hash);
+  return {
+    projectId: match ? decodeURIComponent(match[1]) : null,
+    taskId: match && match[2] ? decodeURIComponent(match[2]) : null,
+  };
 }
 
-function useProjectInAddress() {
-  const [projectId, setProjectId] = useState(projectInAddress);
+function usePlaceInAddress() {
+  const [place, setPlace] = useState(placeInAddress);
   useEffect(() => {
-    const update = () => setProjectId(projectInAddress());
+    const update = () => setPlace(placeInAddress());
     window.addEventListener("hashchange", update);
     return () => window.removeEventListener("hashchange", update);
   }, []);
-  return projectId;
+  return place;
 }
 
 function goToDashboard() {
@@ -33,10 +42,11 @@ function goToDashboard() {
 }
 
 // The log-in screen (US02), and once logged in: the header with who is logged in and "Log out", the home
-// dashboard (US04) and a project (US04 AC02). All interface text is in English (C05, DoD01).
+// dashboard (US04), a project with its board (US04 AC02, US06) and a task (US20). All interface text is in
+// English (C05, DoD01).
 export function App() {
   const [state, setState] = useState<State>({ screen: "loading" });
-  const projectId = useProjectInAddress();
+  const { projectId, taskId } = usePlaceInAddress();
 
   useEffect(() => {
     // Whenever the API says the session ended (log-out elsewhere, expiry), go back to log-in.
@@ -77,7 +87,14 @@ export function App() {
             <button type="button" onClick={() => handleLogOut(state.session)}>Log out</button>
           </header>
           {state.error && <p role="alert">{state.error}</p>}
-          {projectId ? <ProjectPage projectId={projectId} onLeave={goToDashboard} /> : <Dashboard />}
+          {projectId && taskId ? (
+            <TaskPage projectId={projectId} taskId={taskId}
+              onLeave={() => { window.location.hash = `#/projects/${projectId}`; }} />
+          ) : projectId ? (
+            <ProjectPage projectId={projectId} onLeave={goToDashboard} />
+          ) : (
+            <Dashboard />
+          )}
         </>
       );
   }

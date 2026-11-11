@@ -454,8 +454,8 @@ AC07 to AC09 were added when the project list became the home dashboard ([scope 
 
 | Field | Rules |
 |---|---|
-| Title | Required, between 1 and 200 characters. |
-| Description | Optional, up to 5000 characters. |
+| Title | Required, between 3 and 150 characters. |
+| Description | Optional, up to 2000 characters. |
 | Due date | Optional. Must be a valid date and can't be earlier than the current day (D12). |
 | Priority | One of "Low", "Medium" or "High". Optional when creating: "Medium" if not chosen. |
 
@@ -534,10 +534,12 @@ Scenario Outline: AC08 — Title and description limits
 
   Examples:
     | field       | n    | result                                                      |
-    | title       | 200  | the task is created                                         |
-    | title       | 201  | the message "Task title must be at most 200 characters."    |
-    | description | 5000 | the task is created                                         |
-    | description | 5001 | the message "Description must be at most 5000 characters."  |
+    | title       | 2    | the message "Task title must be at least 3 characters."     |
+    | title       | 3    | the task is created                                         |
+    | title       | 150  | the task is created                                         |
+    | title       | 151  | the message "Task title must be at most 150 characters."    |
+    | description | 2000 | the task is created                                         |
+    | description | 2001 | the message "Description must be at most 2000 characters."  |
 
 Scenario: AC09 — Repeated titles in the same project
   Given the task "Review copy" already exists in the project "Website"

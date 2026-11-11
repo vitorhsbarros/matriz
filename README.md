@@ -68,8 +68,9 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
 - **Implementation:** started. Java 21, Spring Boot 4, PostgreSQL with Flyway, and a React + TypeScript browser application built into the same JAR ([docs/architecture.md, section 5](docs/architecture.md#5-technology-stack)). Done so far, from the [implementation plan](docs/implementation-plan.md):
   - I0: the application and its persistence are set up;
   - I1: log-in, the current user and log-out with the demo accounts (US19, US02), and the project access check that the next increments use;
-  - I2: project management, the first complete path from the screen to the database: the home dashboard with task counts and search, and creating, opening, editing and deleting projects (US03, US04, US23, US14, US15).
-- **Next step:** increment I3, tasks and the project board (US05, US06).
+  - I2: project management, the first complete path from the screen to the database: the home dashboard with task counts and search, and creating, opening, editing and deleting projects (US03, US04, US23, US14, US15);
+  - I3: the work of each project: the task board, and creating, moving, editing, viewing, deleting and filtering tasks (US05, US06, US07, US08, US20, US16, US24).
+- **Next step:** increment I4, project members and assigning people to tasks (US09, US10).
 
 ## Running the application
 
@@ -98,11 +99,18 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
 
 **Demo accounts** (made-up people, PRI05): `ana@example.com`, `rui@example.com` and `sara@example.com`, with the passwords set in `.env`. In the project *Website*, Ana is the manager, Rui is a member and Sara is not a member; in *App*, Rui is the manager and Ana is a member. Log in with any of them on the start page.
 
-**What can be done now** (increments I1 and I2):
+**What can be done now** (increments I1 to I3):
 - **Log in and out** with a demo account. The header shows who is logged in.
 - **Home dashboard** (*My projects*): your projects, sorted by name, with your role and the number of tasks in each status, and the totals in *All my projects*. **Search projects** narrows the list; the totals stay the same.
 - **New project:** you become its manager.
-- **Open a project** from the list. Its address (`#/projects/<id>`) survives a reload. The task board arrives in I3.
+- **Open a project** from the list to see its **board**: the columns *To do*, *In progress* and *Done*, each with its number of tasks, newest first. Its address (`#/projects/<id>`) survives a reload.
+- **Tasks** (any member, on any task of the project):
+  - **New task** with a title (3–150 characters), an optional description (up to 2000), an optional due date (not in the past) and a priority (*Medium* by default);
+  - change the status with the ← → buttons, by dragging the card to another column, or in the task's details;
+  - filter the board by status and priority, and **Clear filters**;
+  - open a task for its details (`#/projects/<id>/tasks/<id>`), **Edit** it, or **Delete task** after confirming (also on each card).
+  - The board and its counts update at once, without reloading; the home dashboard shows the new counts when it is opened again.
+  - Assignees and comments arrive in I4–I6; until then every task is *Unassigned*.
 - **As the manager:** **Edit** the name and description, and **Delete project** after confirming. Deleting also deletes the project's tasks and comments.
 - Members see the project but not Edit or Delete; anyone else gets "Project not found.".
 - Projects are stored in PostgreSQL, so they are still there after restarting the application.

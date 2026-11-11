@@ -87,6 +87,7 @@ test("a reload on a project's address opens that project again", async () => {
     "GET /api/projects/p-website": [
       { status: 200, body: { id: "p-website", name: "Website", description: null, role: "MANAGER" } },
     ],
+    "GET /api/projects/p-website/tasks": [{ status: 200, body: [] }],
   });
   render(<App />);
 

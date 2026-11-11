@@ -170,7 +170,7 @@ Successful scenarios map to `2xx` responses with the data described in each oper
 | US05 | AC04 | `422` — "Due date cannot be in the past." |
 | US05 | AC05 | `422` — "Enter a valid date." |
 | US05 | AC06 | `404` — "Project not found." |
-| US05 | AC08 | `422` — "Task title must be at most 200 characters." / "Description must be at most 5000 characters." |
+| US05 | AC08 | `422` — "Task title must be at least 3 characters." / "Task title must be at most 150 characters." / "Description must be at most 2000 characters." |
 | US05 | AC02 | `201`, `priority: MEDIUM` when not sent |
 | US05 | AC10, US08 AC10 | `422` — "Invalid priority." |
 | US06 | AC01, AC06 | `200`, newest first, including done tasks. The client groups them into the board's status columns, keeping that order within each column. |
@@ -266,7 +266,7 @@ This choice settles open point OP2 of the data model and the "session storage" r
 | AS06 | Resources that don't exist return `404` with "Task not found.", "Team not found." or "Member not found." | Now defined in the acceptance criteria: DoD05, US09 AC11, US12 AC10, US12 AC11. |
 | AS07 | A body that isn't valid JSON, has unknown fields or has a field of the wrong JSON type returns `400` with "The request body is not valid." Missing or empty fields, lengths, formats and enum values return `422` with the acceptance criteria message (e.g. US05 AC03, AC05, US07 AC04). | Now defined in the acceptance criteria: DoD07. Unknown fields are rejected (`additionalProperties: false`). |
 | AS08 | Validation errors return `422`, and only the first failing check is reported, in the order the fields are listed in the schema. | The acceptance criteria always show a single message. |
-| AS09 | Statuses, priorities and roles travel as `TO_DO`, `IN_PROGRESS`, `DONE`, `LOW`, `MEDIUM`, `HIGH` and `MANAGER`, `MEMBER`. The interface shows "To do", "High", "Manager", etc. | Matches the data model. |
+| AS09 | Statuses, priorities and roles travel as `TODO`, `IN_PROGRESS`, `DONE`, `LOW`, `MEDIUM`, `HIGH` and `MANAGER`, `MEMBER`. The interface shows "To do", "High", "Manager", etc. | Matches the data model. |
 | AS10 | A team referenced in the body that doesn't exist returns `422`, not `404`. | `404` is kept for resources in the URL. |
 | AS11 | "Today" for the due date check (D12) is the current date on the server. | Users in other time zones could see an edge case around midnight. Irrelevant for a local demo. |
 | AS12 | Adding a member with no email returns `422` "Email is required.", reusing the US01 message. | Now defined in the acceptance criteria: US09 AC10, US12 AC09. |

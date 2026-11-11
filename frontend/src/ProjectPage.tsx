@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { ApiError, getProject, Project, updateProject } from "./api";
-import { ConfirmDelete } from "./ConfirmDelete";
+import { ApiError, deleteProject, getProject, Project, updateProject } from "./api";
+import { Board } from "./Board";
+import { ConfirmDelete, deleteProjectMessage } from "./ConfirmDelete";
 import { ROLE_LABEL } from "./Dashboard";
 import { ProjectForm } from "./ProjectForm";
 
 type Props = { projectId: string; onLeave: () => void };
 
-// A project (US04 AC02; wireframe screen 2 without the board, which arrives with US06): name, role and
-// description, and Edit (US14) and Delete project (US15) for the manager only.
+// A project (US04 AC02; wireframe screen 2): name, role and description, Edit (US14) and Delete project (US15)
+// for the manager only, and the task board (US06) for every member.
 export function ProjectPage({ projectId, onLeave }: Props) {
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +53,10 @@ export function ProjectPage({ projectId, onLeave }: Props) {
             </p>
           )}
           {deleting && (
-            <ConfirmDelete project={project} onDeleted={onLeave} onCancel={() => setDeleting(false)} />
+            <ConfirmDelete message={deleteProjectMessage(project.name)} confirmLabel="Delete project"
+              onConfirm={() => deleteProject(projectId)} onDeleted={onLeave} onCancel={() => setDeleting(false)} />
           )}
+          <Board projectId={projectId} />
         </>
       ))}
     </main>
