@@ -65,5 +65,34 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
     - [review-01](docs/reviews/review-01.md) covers the Architecture Pack.
   - A [prompt injection test](docs/reviews/prompt-injection-challenge.md) checked that agents treat external documents as data.
   - The MVP was then [reconciled with a new scope](docs/reviews/scope-reconciliation.md) before implementation.
-- **Implementation:** not started. The technology stack is still to be chosen (pending decision PD01 in [docs/constraints.md](docs/constraints.md)).
-- **Next step:** full-stack development of the MVP, following the user stories in their implementation order.
+- **Implementation:** started. The application and its persistence are set up (increment I0 of the [implementation plan](docs/implementation-plan.md)): Java 21, Spring Boot 4, PostgreSQL with Flyway, and a React + TypeScript browser application built into the same JAR ([docs/architecture.md, section 5](docs/architecture.md#5-technology-stack)).
+- **Next step:** increment I1, log-in and log-out with the demo accounts (US19, US02).
+
+## Running the application
+
+**Requirements:** Java 21 and Docker (running). Node isn't needed to build: Maven downloads its own copy for the browser application.
+
+1. **Configuration.** Copy the example file and replace every value. `.env` is ignored by Git; never commit it.
+   ```bash
+   cp .env.example .env
+   ```
+2. **Database.** Start PostgreSQL in a container (it reads `.env`). Data is kept in a Docker volume between restarts.
+   ```bash
+   docker compose up -d --wait
+   ```
+3. **Build and test.** Builds the back end and the browser application into one JAR and runs every test. The tests start their own throw-away PostgreSQL with Testcontainers, so Docker must be running.
+   ```bash
+   ./mvnw verify
+   ```
+4. **Start.** Applies the database migrations and, if `MATRIZ_DEMO_SEED=true`, creates the demo accounts and projects that don't exist yet. Existing data is never changed or deleted.
+   ```bash
+   java -jar target/matriz-0.1.0-SNAPSHOT.jar
+   ```
+   Or, without building the JAR first: `./mvnw spring-boot:run`. Use another port with `SERVER_PORT=8081`.
+5. **Check.** `http://localhost:8080/actuator/health` answers `{"status":"UP"}` when the database is reachable, and `http://localhost:8080/` shows the start page.
+
+**Working on the browser application:** `cd frontend && npm install && npm run dev` starts Vite on `http://localhost:5173`, which forwards `/api` to the application on port 8080. `npm test` runs its tests.
+
+**Demo accounts** (made-up people, PRI05): `ana@example.com`, `rui@example.com` and `sara@example.com`, with the passwords set in `.env`. In the project *Website*, Ana is the manager, Rui is a member and Sara is not a member; in *App*, Rui is the manager and Ana is a member. Log-in arrives in I1.
+
+**Stop:** `Ctrl+C` stops the application; `docker compose down` stops PostgreSQL and keeps its data (`docker compose down -v` deletes it).

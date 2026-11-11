@@ -1,6 +1,6 @@
 # Matriz — Implementation plan (MVP)
 
-- **Status:** ready to start. The stack is confirmed (section 2). The increments and their status are in section 5; update the **Status** column as the work progresses.
+- **Status:** in progress. I0 is done (2026-11-11); I1 is next. The increments and their status are in section 5; update the **Status** column as the work progresses.
 - **Scope:** the 23 MVP user stories in [user-stories.md](user-stories.md), after the [scope reconciliation](reviews/scope-reconciliation.md).
 - **Prompt:** [docs/prompts/implementation-plan.md](prompts/implementation-plan.md).
 
@@ -36,17 +36,17 @@ Every decision in this plan is marked **Confirmed** (with its source) or **Propo
 | PD | Decision | Blocks | Options and trade-offs |
 |---|---|---|---|
 | PD01 | Technology stack | Everything | **Decided** by the user (section 2). Closing it in constraints.md is proposed. |
-| PD02 | Session expiry | Nothing in the MVP | (a) No expiry, as today: simplest; abandoned sessions pile up. (b) Fixed idle timeout (e.g. 8 h): one attribute and a clean-up job. (c) Absolute lifetime: same cost, logs out active users. |
-| PD03 | Tool for checking module boundaries | Project set-up | (a) Architecture tests in the test suite (e.g. ArchUnit): plain tests, explicit rules. (b) A module framework (e.g. Spring Modulith): checks plus event support, more framework to learn. (c) Package conventions only: no tool, relies on discipline (ADR-0001 asks for an automated check). |
-| PD04 | Foreign keys between modules' data | Project set-up (schema) | (a) Foreign keys: the database protects integrity; deletes must follow module order. (b) Identifiers only: modules fully independent; integrity relies on the events (R12, R17, R19). |
+| PD02 | Session expiry | **I1.** Spring Session expires a session after 30 minutes without use by default, so "sessions last until log-out" (ADR-0002) no longer holds once log-in exists. Decide before I1. | (a) No expiry, as today: simplest; abandoned sessions pile up. (b) Fixed idle timeout (e.g. 8 h): one attribute and a clean-up job. (c) Absolute lifetime: same cost, logs out active users. |
+| PD03 | Tool for checking module boundaries — **Decided 2026-11-11: Spring Modulith** | Project set-up | (a) Architecture tests in the test suite (e.g. ArchUnit): plain tests, explicit rules. (b) A module framework (e.g. Spring Modulith): checks plus event support, more framework to learn. (c) Package conventions only: no tool, relies on discipline (ADR-0001 asks for an automated check). |
+| PD04 | Foreign keys between modules' data — **Decided 2026-11-11: foreign keys with `ON DELETE RESTRICT`** | Project set-up (schema) | (a) Foreign keys: the database protects integrity; deletes must follow module order. (b) Identifiers only: modules fully independent; integrity relies on the events (R12, R17, R19). |
 | PD05 | Assign and remove a member at the same time | Assigning people (US10) | (a) Lock the membership row while assigning: simple, short waits. (b) Serializable transactions for these two operations: correct, retries needed. (c) Accept the rare race for the demo, documented as a known risk. |
-| PD06 | Password hashing | Log-in (US02, US19) | (a) BCrypt: the framework default, well known. (b) Argon2: stronger, needs an extra library. Both meet NFR04. |
+| PD06 | Password hashing — **Decided 2026-11-11: BCrypt** | Log-in (US02, US19) | (a) BCrypt: the framework default, well known. (b) Argon2: stronger, needs an extra library. Both meet NFR04. |
 | PD07 | Deleting an account | Not in the MVP | Deferred (constraints.md). |
 | PD08 | Scalability as a requirement | Not in the MVP | Deferred. |
 | PD09 | Review-01 F05 wording | Nothing | Wording only; decide when convenient. |
 | PD10 | Repeated log-in attempts | Not in the MVP | (a) None in the MVP: demo with seed accounts. (b) Temporary block per email after N failures: small, but must not reveal whether the email exists (SEC04). |
 | PD11 | Who can see teams | Teams (US11–US13) | (a) Everyone (D05, as today): simplest. (b) Only users sharing a project with the team's members: more private, more queries. |
-| PD12 | Demo accounts | Log-in (US02, US19) | See G04. In the deployment, the seed runs at start-up (e.g. a Flyway migration or a start-up task) and reads the passwords from the platform's secrets. |
+| PD12 | Demo accounts — **Decided 2026-11-11:** 3 accounts and 2 projects, seed at start-up | Log-in (US02, US19) | See G04. In the deployment, the seed runs at start-up (e.g. a Flyway migration or a start-up task) and reads the passwords from the platform's secrets. |
 | PD13 | **Deployment platform** (new) | The deployment, planned later | (a) A platform that runs a container and offers managed PostgreSQL (e.g. Render, Railway, Fly.io): least set-up, HTTPS included, free tiers may sleep or expire. (b) A virtual machine with Docker Compose: full control, but HTTPS, updates and backups are the developer's job. (c) A university or company server, if one is available: depends on what it offers. |
 
 ### 1.4 Questions for the user
@@ -65,18 +65,19 @@ Every decision in this plan is marked **Confirmed** (with its source) or **Propo
 | Part | Choice |
 |---|---|
 | Language | Java 21 |
-| Application | Spring Boot 3: Spring Web, Spring Security (session cookie, CSRF header), Spring Session JDBC, Spring Data JPA |
+| Application | Spring Boot 4.1.2 (moved from 3 at the start of I0, user's decision): Spring Web MVC, Spring Security (session cookie, CSRF header), Spring Session JDBC, Spring Data JPA |
 | Database | PostgreSQL, with Flyway migrations (one folder per module); Docker Compose locally, Testcontainers in tests |
 | Browser application | React + TypeScript, built with Vite, served from the same JAR |
 | Build and tests | Maven; JUnit 5, Spring Boot Test with MockMvc; Vitest and Testing Library |
 | Packaging | One executable JAR in one container image |
 
-The planned layout below is **Proposed**:
+The layout below was created in I0:
 
 ```
 matriz/
 ├── pom.xml                          Maven build (back end + browser application)
 ├── compose.yaml                     PostgreSQL for local development
+├── .env.example                     configuration with fictitious values (copy to .env, never committed)
 ├── src/main/java/matriz/
 │   ├── web/                         web entry: session, CSRF, errors (Problem Details)
 │   ├── accounts/                    Accounts module
@@ -84,12 +85,12 @@ matriz/
 │   ├── teams/                       Teams module
 │   └── tasks/                       Tasks module (tasks, assignees, comments, dashboard)
 ├── src/main/resources/db/migration/ Flyway migrations, one folder per module
-├── src/test/java/matriz/            API tests per module, boundary tests (PD03)
+├── src/test/java/matriz/            ModularityTest (PD03), PersistenceSetupTest, StartUpTest
 └── frontend/                        React + TypeScript (Vite)
     └── src/pages/                   log-in, home dashboard, board, task details, members, teams
 ```
 
-Each module has the three layers of ADR-0001 (presentation, business logic, data access) as sub-packages, and a public interface for the other modules.
+Each module's public interface is the types directly in its package (e.g. `matriz.accounts.AccountDirectory`); everything in its sub-packages (e.g. `matriz.accounts.internal`) is private to it. Spring Modulith checks this in every build. The three layers of ADR-0001 go inside the module's sub-packages as the code grows.
 
 ## 3. Access rules
 
@@ -171,7 +172,7 @@ Nine increments, in about 15 working days (ASM08). Each one ends with a working,
 
 | # | Increment | Stories | Depends on | Days | Status |
 |---|---|---|---|---|---|
-| I0 | Project set-up | — | — | 1 | Not started |
+| I0 | Project set-up | — | — | 1 | Done |
 | I1 | Access: demo accounts, log-in and log-out | US19, US02 | I0 | 1.5 | Not started |
 | I2 | Projects and tasks: create, board, home dashboard | US03, US05, US06, US04 | I1 | 2.5 | Not started |
 | I3 | Working on a task: status, editing, details, deleting | US07, US08, US20, US16 | I2 | 2 | Not started |
@@ -197,6 +198,27 @@ Nine increments, in about 15 working days (ASM08). Each one ends with a working,
 | **Dependencies** | None. Needs PD03 (boundary check) and PD04 (foreign keys) decided. |
 | **Acceptance criteria** | The application starts locally against PostgreSQL; one `mvn verify` builds the back end and the browser application into one JAR; the browser application is served from the same site as `/api`; a malformed request returns DoD07's message. |
 | **Checks** | `mvn verify` passes; a boundary test fails when a module uses another module's internals (PD03); a test for DoD07. AGENTS.md §10 gets the build, test and style commands (Proposed follow-up). |
+
+**Done on 2026-11-11.** The prompt is in [docs/prompts/application-setup.md](prompts/application-setup.md).
+
+| Item | Result |
+|---|---|
+| Project structure | `pom.xml` (Spring Boot 4.1.2, Spring Modulith 2.1.2), Maven wrapper, packages `web`, `accounts`, `projects`, `teams`, `tasks`; `frontend/` (React 19.3.1, TypeScript 5.9.3, Vite 8.3.5, Vitest 4.1.12) built by Maven into the JAR. |
+| Configuration | `application.yaml` reads every secret from environment variables; `.env` (ignored by Git) is loaded for local development; `.env.example` has fictitious values only. The session cookie is `MATRIZ_SESSION`, `HttpOnly`, `Secure`, `SameSite=Lax` (ADR-0002). |
+| Schema | Flyway migrations for the **whole** data model, one folder per module: `users` and the Spring Session tables (Accounts), `project`, `project_member` (Projects), `team`, `team_member` (Teams), `task`, `task_assignee_user`, `task_assignee_team`, `task_comment` (Tasks). |
+| Demo data | Seed at start-up when `MATRIZ_DEMO_SEED=true`: Ana Silva, Rui Costa, Sara Lopes; *Website* (Ana manager, Rui member, Sara not a member) and *App* (Rui manager, Ana member). Only missing rows are inserted; nothing is changed or deleted. |
+| Access | Only the start page, its files and `/actuator/health` are public; every other request gets `403` until log-in exists (I1). |
+| Commands | In [README.md](../README.md#running-the-application) and AGENTS.md §10. |
+| Checks | `./mvnw verify`: 7 back-end tests and 1 front-end test pass. Started twice against the PostgreSQL in `compose.yaml`: health `UP`, start page `200`, same row counts after the second start. |
+
+**Differences from the plan above:**
+- **DoD07 (Problem Details for a malformed body) moved to I1**, because I0 has no API operation to test it with.
+- **Physical names differ from database.md** where a name is reserved in SQL: USER is `users`, COMMENT is `task_comment`. SESSION is stored in Spring Session's tables (`spring_session`, `spring_session_attributes`), with the CSRF token as a session attribute. **Proposed:** add a note on these names to database.md.
+- **The Teams and Tasks tables were created now**, with the whole schema, as the prompt asked; their behaviour still arrives in I2–I7.
+
+**Left for later:**
+- PD02 (session expiry) must be decided before I1, see section 1.3.
+- On the developer's machine, another program uses port 8080, so the check ran on port 8081 (`SERVER_PORT=8081`). The Vite proxy assumes 8080.
 
 ### I1 — Access: demo accounts, log-in and log-out (US19, US02)
 

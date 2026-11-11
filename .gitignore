@@ -1,7 +1,17 @@
-# macOS
-.DS_Store
+# Secrets: never commit (SEC10, AGENTS.md §7)
+.env
 
-# Editores
-.vscode/
+# Build output
+target/
+
+# Browser application
+frontend/node_modules/
+frontend/target/
+frontend/dist/
+
+# IDE and OS
 .idea/
+*.iml
 *.swp
+.vscode/
+.DS_Store

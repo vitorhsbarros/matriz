@@ -92,4 +92,12 @@ End every task with a short report:
 
 - **Language:** code, documentation, commit messages and interface text are in English (C05, C06). Talk to the user in their language.
 - **Commits:** small and focused, with a message that says what changed and why.
-- **Technology:** the stack isn't chosen yet (PD01). Until it is, don't assume a language, framework or tool beyond what the user asks for. Once the stack is chosen, add its build, test and style commands to this file.
+- **Technology:** the stack is in [docs/architecture.md, section 5](docs/architecture.md#5-technology-stack): Java 21, Spring Boot 4, PostgreSQL with Flyway, React + TypeScript with Vite, Maven. Don't add other languages, frameworks or tools without the user's approval (section 6).
+- **Commands** (details in [README.md](README.md#running-the-application)):
+  - **Build and test everything:** `./mvnw verify` (needs Docker running for Testcontainers).
+  - **Start the database:** `docker compose up -d --wait` (reads `.env`; copy `.env.example`).
+  - **Run the application:** `./mvnw spring-boot:run`, or `java -jar target/matriz-0.1.0-SNAPSHOT.jar`.
+  - **Browser application only:** in `frontend/`, `npm run dev`, `npm test`, `npm run build`.
+  - **Module boundaries:** checked by `ModularityTest` (Spring Modulith) in every build.
+- **Style:** no formatter or linter is configured yet. Follow the existing code: 4-space indentation in Java, 2 spaces in TypeScript, JSON and YAML.
+- **Database changes:** only through new Flyway migrations in the owning module's folder (`src/main/resources/db/migration/<module>`). Never edit a migration that has already been applied.

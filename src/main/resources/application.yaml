@@ -1,0 +1,49 @@
+# Matriz configuration. Every value that differs per environment, and every secret, comes from
+# environment variables (SEC10). For local development they can be put in a .env file at the
+# project root (copy .env.example); .env is never committed.
+spring:
+  application:
+    name: matriz
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${MATRIZ_DB_URL:}
+    username: ${MATRIZ_DB_USER:}
+    password: ${MATRIZ_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    # One folder per module (ADR-0001), applied in version order: accounts, projects, teams, tasks.
+    locations:
+      - classpath:db/migration/accounts
+      - classpath:db/migration/projects
+      - classpath:db/migration/teams
+      - classpath:db/migration/tasks
+  session:
+    jdbc:
+      # The session tables are created by Flyway (accounts/V1_1__sessions.sql).
+      initialize-schema: never
+
+server:
+  servlet:
+    session:
+      cookie:
+        name: MATRIZ_SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+matriz:
+  demo:
+    seed: ${MATRIZ_DEMO_SEED:false}
+    password-ana: ${MATRIZ_DEMO_PASSWORD_ANA:}
+    password-rui: ${MATRIZ_DEMO_PASSWORD_RUI:}
+    password-sara: ${MATRIZ_DEMO_PASSWORD_SARA:}

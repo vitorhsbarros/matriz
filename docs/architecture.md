@@ -83,7 +83,7 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
 | Part | Proposal | Why |
 |---|---|---|
 | **Language** | Java 21 (LTS) | The developer's experience (ASM07). |
-| **Application framework** | Spring Boot 3, one application (ADR-0001): Spring Web for the JSON API in `openapi.yaml`, Spring Security for the session cookie and the CSRF header (ADR-0002), Spring Session JDBC to keep sessions in the shared database (ADR-0002), Spring Data JPA for data access. | Covers ADR-0001 and ADR-0002 with standard, well-known parts; the developer already knows them (ASM07). |
+| **Application framework** | Spring Boot 4 (4.1.2), one application (ADR-0001): Spring Web for the JSON API in `openapi.yaml`, Spring Security for the session cookie and the CSRF header (ADR-0002), Spring Session JDBC to keep sessions in the shared database (ADR-0002), Spring Data JPA for data access. | Covers ADR-0001 and ADR-0002 with standard, well-known parts; the developer already knows them (ASM07). |
 | **Database** | PostgreSQL, one database for the whole application (ADR-0001), the same product in development, tests and deployment. Schema managed with Flyway migrations, one folder per module. Locally it runs in a container (Docker Compose); the tests use Testcontainers. | The application will be deployed, so the database must be a server database that keeps its data between restarts and runs the same way everywhere. PostgreSQL is free, widely hosted and well supported by Spring Boot and Flyway. |
 | **Browser application** | A single-page application in React with TypeScript, built with Vite. The build output is copied into the Spring Boot JAR (e.g. with the `frontend-maven-plugin`) and served by the same application. In development, the Vite server forwards `/api` to Spring Boot. | It is the client the API was designed for (AS01 in api-contract.md). Served from the same site as the API, which `SameSite=Lax` needs (ADR-0002, ASM11), and still one deployable (ADR-0001). React has ready-made parts for the board's drag and drop (US07) and for forms; TypeScript keeps the client's types in line with `openapi.yaml`. |
 | **Build and tests** | Maven (with the wrapper) builds the whole application, including the browser application. JUnit 5 and Spring Boot Test with MockMvc for the API, one test per acceptance criterion where possible, against PostgreSQL in Testcontainers. Vitest and Testing Library for the browser application's components. | Standard for each part; tests map to the acceptance criteria (C08), on the same database as the deployment. |
@@ -108,5 +108,7 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
 - the password hashing method (PD06);
 - the demo account seed (PD12);
 - the deployment platform (PD13).
+
+**Spring Boot 4 instead of 3.** The stack was confirmed with Spring Boot 3, but the 3.5 line, the last one, no longer gets free security fixes. At the start of I0 the user chose to move to Spring Boot 4 (2026-11-11).
 
 **Follow-ups, proposed:** close PD01 in [constraints.md](constraints.md), and add the build, test and style commands to AGENTS.md §10 once the project is created ([implementation-plan.md](implementation-plan.md), increment I0).

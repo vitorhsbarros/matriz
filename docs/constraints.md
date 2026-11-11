@@ -84,18 +84,18 @@ Technical decisions that are still open. They must be decided, by the user, befo
 
 | ID | Decision | Where it comes from |
 |---|---|---|
-| PD01 | **Technology stack:** languages, frameworks, database product and how the browser application is built. | C07, architecture.md |
+| PD01 | **Technology stack:** languages, frameworks, database product and how the browser application is built. **Decided 2026-11-11:** see [architecture.md, section 5](architecture.md#5-technology-stack). | C07, architecture.md |
 | PD02 | **Session expiry:** how long a session lasts. Until decided, sessions last until log-out and abandoned sessions stay in the database. | ADR-0002, review-01 S01 |
-| PD03 | **Tool for checking module boundaries** automatically. | ADR-0001, 04-solution-architecture open point 3 |
-| PD04 | **References between modules' data:** protected by database rules (foreign keys) or only by identifiers. | database.md OP1 |
+| PD03 | **Tool for checking module boundaries** automatically. **Decided 2026-11-11:** Spring Modulith, run as a test in every build. | ADR-0001, 04-solution-architecture open point 3 |
+| PD04 | **References between modules' data:** protected by database rules (foreign keys) or only by identifiers. **Decided 2026-11-11:** foreign keys with `ON DELETE RESTRICT` between modules; within a module, a part is deleted with its whole (e.g. members with their project). | database.md OP1 |
 | PD05 | **Assigning and removing a member at the same time** (US10 AC05): the transaction isolation or ordering that prevents an assignment from surviving a removal. | 04-solution-architecture, risks |
-| PD06 | **How passwords are protected:** a one-way, salted and deliberately slow hashing method, never reversible encryption (NFR04). The specific algorithm is chosen with the stack. | NFR04 |
+| PD06 | **How passwords are protected:** a one-way, salted and deliberately slow hashing method, never reversible encryption (NFR04). The specific algorithm is chosen with the stack. **Decided 2026-11-11:** BCrypt, through Spring Security's delegating encoder. | NFR04 |
 | PD07 | **Deleting an account and its personal data.** Not in the MVP. Needed before real users' data is kept long-term. | PRI01 |
 | PD08 | **Scalability as a formal requirement.** | 04-solution-architecture open point 4 |
 | PD09 | **Review-01 item without a decision:** F05 (membership role wording in 04-solution-architecture). Its S02 (US06 title) was resolved by specification-review SR14. | [review-01](reviews/review-01.md) |
 | PD10 | **Protection against repeated log-in attempts** (e.g. a temporary block after several failures for the same email). Not in the MVP requirements. | specification-review SR09 |
 | PD11 | **Who can see teams:** every user (D05), or only users who share a project with the team's members. | specification-review SR10 |
-| PD12 | **Demo accounts:** how many there are, and how the seed is run and gets the passwords from configuration. Decided with the stack (PD01). | FR21, [scope reconciliation](reviews/scope-reconciliation.md) SC03 |
+| PD12 | **Demo accounts:** how many there are, and how the seed is run and gets the passwords from configuration. Decided with the stack (PD01). **Decided 2026-11-11:** three accounts (Ana Silva, Rui Costa, Sara Lopes) and two projects, created at start-up when `MATRIZ_DEMO_SEED=true`, with passwords from environment variables; only missing rows are inserted. | FR21, [scope reconciliation](reviews/scope-reconciliation.md) SC03 |
 
 ## 5. Scope limitations
 
