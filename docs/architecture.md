@@ -6,7 +6,7 @@ This is the entry point of the Architecture Pack of the Matriz MVP. It summarise
 
 Matriz is a **modular monolith** ([ADR-0001](architecture/adr/ADR-0001-modular-monolith.md)):
 - **One application and one database:** a single application, deployed as one unit, with one relational database.
-- **Four business modules:** Accounts, Projects, Teams and Tasks. Each module owns its own data and exposes a small public interface to the others.
+- **Four business modules:** Accounts, Projects, Teams and Tasks. Each module owns its own data and exposes a small public interface to the others. Tasks also owns the comments and the task counts of the home dashboard.
 - **Simple layers inside each module:** presentation, business logic and data access.
 - **One-way dependencies:** Projects and Teams depend on Accounts, and Tasks depends on Projects and Teams. When Projects removes a member or deletes a project, or Teams deletes a team, Tasks reacts to an in-process event, in the same transaction (D10, FR05, FR20).
 - **Sessions:** server-side sessions identified by a session cookie, stored in the shared database, with a CSRF token on every data-changing request ([ADR-0002](architecture/adr/ADR-0002-session-cookie-authentication.md)).
@@ -61,8 +61,8 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
 | [architecture/04-solution-architecture.md](architecture/04-solution-architecture.md) | Containers, modules and their responsibilities, dependency rules, key sequences (US05, US09, US13), quality attributes, deployment view, risks and open points. |
 | [architecture/adr/](architecture/adr/) | Architecture decision records: ADR-0001 (modular monolith) and ADR-0002 (session cookie authentication). |
 | [database.md](database.md) | Logical data model and ER diagram. |
-| [../openapi.yaml](../openapi.yaml) and [api-contract.md](api-contract.md) | API specification (24 operations) and the reasoning behind it. |
-| [ui/](ui/README.md) | Low-fidelity wireframe of My projects and the project board. |
+| [../openapi.yaml](../openapi.yaml) and [api-contract.md](api-contract.md) | API specification (29 operations) and the reasoning behind it. |
+| [ui/](ui/README.md) | Low-fidelity wireframe of the home dashboard, the project board and the task details. |
 
 ## 4. Assumptions and pending decisions
 

@@ -8,26 +8,33 @@ Every MVP user story has **Must** priority. The **Order** column gives the recom
 
 | Order | US | Title | Requirements | Depends on |
 |---|---|---|---|---|
-| 1 | [US01](#us01--register-an-account) | Register an account | FR01, NFR04 | — |
-| 2 | [US02](#us02--log-in-and-log-out) | Log in and log out | FR02, NFR02 | US01 |
+| 1 | [US19](#us19--use-the-demo-accounts) | Use the demo accounts | FR21, NFR04 | — |
+| 2 | [US02](#us02--log-in-and-log-out) | Log in and log out | FR02, NFR02 | US19 |
 | 3 | [US03](#us03--create-a-project) | Create a project | FR03 | US02 |
-| 4 | [US04](#us04--view-my-projects) | View my projects | FR07, NFR03 | US03 |
+| 4 | [US04](#us04--view-my-projects-on-the-home-dashboard) | View my projects on the home dashboard | FR07, NFR03 | US03, US05 |
 | 5 | [US05](#us05--create-a-task) | Create a task | FR10 | US03 |
 | 6 | [US06](#us06--view-a-projects-task-board) | View a project's task board | FR15 | US05 |
 | 7 | [US07](#us07--change-a-tasks-status) | Change a task's status | FR13, NFR07 | US05 |
 | 8 | [US08](#us08--edit-a-task) | Edit a task | FR11 | US05 |
-| 9 | [US09](#us09--manage-a-projects-members) | Manage a project's members | FR06, NFR03 | US03 |
-| 10 | [US10](#us10--assign-a-task-to-a-person) | Assign a task to a person | FR14 | US05, US09 |
-| 11 | [US11](#us11--create-a-team) | Create a team | FR08 | US02 |
-| 12 | [US12](#us12--manage-a-teams-members) | Manage a team's members | FR09 | US11 |
-| 13 | [US13](#us13--assign-a-task-to-a-team) | Assign a task to a team | FR14 | US10, US12 |
-| 14 | [US14](#us14--edit-a-project) | Edit a project | FR04, NFR03 | US03 |
-| 15 | [US15](#us15--delete-a-project) | Delete a project | FR05, NFR03, NFR05 | US03, US05 |
-| 16 | [US16](#us16--delete-a-task) | Delete a task | FR12, NFR05 | US05 |
-| 17 | [US17](#us17--rename-a-team) | Rename a team | FR19, NFR03 | US11 |
-| 18 | [US18](#us18--delete-a-team) | Delete a team | FR20, NFR03, NFR05 | US11, US13 |
+| 9 | [US20](#us20--view-a-tasks-details) | View a task's details | FR22 | US06 |
+| 10 | [US09](#us09--manage-a-projects-members) | Manage a project's members | FR06, NFR03 | US03 |
+| 11 | [US10](#us10--assign-people-to-a-task) | Assign people to a task | FR14 | US05, US09 |
+| 12 | [US11](#us11--create-a-team) | Create a team | FR08 | US02 |
+| 13 | [US12](#us12--manage-a-teams-members) | Manage a team's members | FR09 | US11 |
+| 14 | [US13](#us13--assign-a-team-to-a-task) | Assign a team to a task | FR14 | US10, US12 |
+| 15 | [US14](#us14--edit-a-project) | Edit a project | FR04, NFR03 | US03 |
+| 16 | [US15](#us15--delete-a-project) | Delete a project | FR05, NFR03, NFR05 | US03, US05 |
+| 17 | [US16](#us16--delete-a-task) | Delete a task | FR12, NFR05 | US05 |
+| 18 | [US17](#us17--rename-a-team) | Rename a team | FR19, NFR03 | US11 |
+| 19 | [US18](#us18--delete-a-team) | Delete a team | FR20, NFR03, NFR05 | US11, US13 |
+| 20 | [US21](#us21--comment-on-a-task) | Comment on a task | FR23 | US20 |
+| 21 | [US22](#us22--edit-or-delete-my-comment) | Edit or delete my comment | FR23, NFR03, NFR05 | US21 |
+| 22 | [US23](#us23--search-my-projects) | Search my projects | FR24 | US04 |
+| 23 | [US24](#us24--filter-a-projects-tasks) | Filter a project's tasks | FR17 | US06 |
 
 FR14 was split into two stories (US10 and US13). Assigning tasks to people can be delivered before teams exist, which makes the product usable sooner.
+
+US01 (Register an account) is no longer in the MVP backlog: public registration became an optional extension, and the demo accounts (US19) give access instead. It is kept, unchanged, in [section 6](#6-optional-extensions). The story numbers aren't reused, so references stay valid ([scope reconciliation](reviews/scope-reconciliation.md)).
 
 ## 2. Cross-cutting criteria (Definition of Done)
 
@@ -72,7 +79,7 @@ Quoted messages in the acceptance criteria are the exact text to show. When an a
 
 ### DoD05 — Task that doesn't exist
 
-Applies to every user story that acts on an existing task (US07, US08, US10, US13, US16).
+Applies to every user story that acts on an existing task (US07, US08, US10, US13, US16, US20, US21, US22).
 
 ```gherkin
 Scenario: A member acts on a task that doesn't exist in the project
@@ -121,9 +128,11 @@ The requirements left some points open. These decisions apply to every US.
 | D07 | **Managers are also members:** whoever creates a project or team becomes its manager and a member. The manager can't be removed. |
 | D08 | **Any member can change tasks:** any project member can edit, change the status of and assign any task in that project, not just the assignee. |
 | D09 | **Team assignment is only checked when assigning:** the rule "all team members belong to the project" is only checked when the task is assigned. Later changes to the team don't undo existing assignments. |
-| D10 | **Removing a project member:** tasks assigned to that person in that project become unassigned. Tasks assigned to teams are not affected. |
+| D10 | **Removing a project member:** that person is removed from the assignees of every task in that project. Other assignees, including teams, are not affected. |
 | D11 | **Simultaneous changes:** if two members change the same task at the same time, the last saved change wins. |
 | D12 | **Due dates:** a new or changed due date can't be earlier than the current day. A past due date that isn't changed stays valid. |
+| D13 | **Comments of people who leave:** when the author of a comment is removed from the project, the comment stays, with the author's name. |
+| D14 | **Dashboard totals:** the totals on the home dashboard always cover every project the user is a member of, even while a search (US23) narrows the list. |
 
 ## 4. Traceability
 
@@ -131,7 +140,6 @@ Every MVP requirement is covered by at least one US or by a cross-cutting criter
 
 | Requirement or constraint | Covered by |
 |---|---|
-| FR01 | US01 |
 | FR02 | US02 |
 | FR03 | US03 |
 | FR04 | US14 |
@@ -148,147 +156,34 @@ Every MVP requirement is covered by at least one US or by a cross-cutting criter
 | FR13 | US07 |
 | FR14 | US10, US13 |
 | FR15 | US06 |
+| FR17 | US24 |
+| FR21 | US19 |
+| FR22 | US20 |
+| FR23 | US21, US22 |
+| FR24 | US23 |
 | NFR02 | US02, DoD02 |
-| NFR03 | US04, US09, DoD03 |
-| NFR04 | US01 |
-| NFR05 | US15, US16, US18 |
+| NFR03 | US04, US09, US22, DoD03 |
+| NFR04 | US19 |
+| NFR05 | US15, US16, US18, US22 |
 | NFR07 | US07 |
 | C05 | DoD01 |
 
-The Should requirements (FR16, FR17, FR18, NFR06) are not in this backlog and will be turned into user stories after the MVP.
+The Should requirements (FR16, FR18, FR25, NFR06) are not in this backlog and will be turned into user stories after the MVP. FR01 (public registration) is an optional extension: its story, US01, is kept in [section 6](#6-optional-extensions).
 
 ## 5. User stories
 
 Each story has a priority, an implementation order, the requirements it covers, its acceptance criteria in Given / When / Then form, and its exceptional situations and edge cases.
 
-### US01 — Register an account
-
-| Priority | Order | Requirements | Depends on |
-|---|---|---|---|
-| Must (MVP) | 1 | FR01, NFR04 | — |
-
-#### User story
-
-**As a** visitor,
-**I want** to create an account with my name, email and password,
-**so that** I can take part in Matriz projects.
-
-#### Rules
-
-| Field | Rules |
-|---|---|
-| Name | Required, between 1 and 100 characters. |
-| Email | Required, in the format `text@domain.extension`, at most 254 characters. Must be unique (case-insensitive, D03). |
-| Password | Required, between 8 and 128 characters. Spaces are not trimmed. |
-
-#### Acceptance criteria
-
-##### Main scenario
-
-```gherkin
-Scenario: AC01 — Successful sign-up
-  Given there is no account with the email "ana@example.com"
-  When the visitor signs up with the name "Ana Silva", the email "ana@example.com" and the password "secure123"
-  Then an account is created with the name "Ana Silva" and the email "ana@example.com"
-  And the visitor is logged in with that account
-  And the project list is shown (US04)
-```
-
-##### Exceptional situations
-
-```gherkin
-Scenario: AC02 — Email already registered
-  Given an account with the email "ana@example.com" already exists
-  When the visitor signs up with the email "ana@example.com"
-  Then the message "This email is already in use." is shown
-  And no account is created
-
-Scenario: AC03 — Email already registered with different casing
-  Given an account with the email "ana@example.com" already exists
-  When the visitor signs up with the email "Ana@Example.COM"
-  Then the message "This email is already in use." is shown
-  And no account is created
-
-Scenario Outline: AC04 — Missing required fields
-  When the visitor signs up leaving the <field> field with the value <value>
-  Then the message <message> is shown
-  And no account is created
-
-  Examples:
-    | field    | value | message                 |
-    | name     | ""    | "Name is required."     |
-    | name     | "   " | "Name is required."     |
-    | email    | ""    | "Email is required."    |
-    | password | ""    | "Password is required." |
-
-Scenario Outline: AC05 — Invalid email format
-  When the visitor signs up with the email <email>
-  Then the message "Enter a valid email address." is shown
-  And no account is created
-
-  Examples:
-    | email             |
-    | "ana"             |
-    | "ana@"            |
-    | "ana.example.com" |
-    | "@example.com"    |
-    | "ana@example"     |
-```
-
-##### Edge cases
-
-```gherkin
-Scenario Outline: AC06 — Name limits
-  When the visitor signs up with a name of <n> characters
-  Then the result is <result>
-
-  Examples:
-    | n   | result                                              |
-    | 1   | the account is created                              |
-    | 100 | the account is created                              |
-    | 101 | the message "Name must be at most 100 characters."  |
-
-Scenario Outline: AC07 — Password limits
-  When the visitor signs up with a password of <n> characters
-  Then the result is <result>
-
-  Examples:
-    | n   | result                                                 |
-    | 7   | the message "Password must be at least 8 characters."  |
-    | 8   | the account is created                                 |
-    | 128 | the account is created                                 |
-    | 129 | the message "Password must be at most 128 characters." |
-
-Scenario: AC08 — Leading and trailing spaces in name and email
-  When the visitor signs up with the name "  Ana Silva  " and the email "  ana@example.com  "
-  Then the account is created with the name "Ana Silva" and the email "ana@example.com"
-```
-
-##### Password security (NFR04)
-
-```gherkin
-Scenario: AC09 — Password hidden while typing
-  When the visitor types the password in the sign-up form
-  Then each character is shown as a mask symbol, not as the typed character
-
-Scenario: AC10 — Password not stored in readable text
-  Given the visitor signed up with the password "secure123"
-  When the stored data for that account is inspected
-  Then the text "secure123" does not appear in any of the stored data
-  And decoding the stored value as Base64 or hexadecimal does not produce "secure123"
-  And a second account created with the password "secure123" stores a different value
-```
-
 ### US02 — Log in and log out
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 2 | FR02, NFR02 | US01 |
+| Must (MVP) | 2 | FR02, NFR02 | US19 |
 
 #### User story
 
-**As a** registered user,
-**I want** to log in and log out with my email and password,
+**As a** user with an account,
+**I want** to log in and log out with my email and password, and see who is logged in,
 **so that** I can access my projects without anyone else doing so on my behalf.
 
 #### Acceptance criteria
@@ -302,7 +197,7 @@ Scenario: AC01 — Successful log in
   Given the visitor is not logged in
   When they log in with the email "ana@example.com" and the password "secure123"
   Then they are logged in with the account "ana@example.com"
-  And the project list is shown (US04)
+  And the home dashboard is shown (US04)
 
 Scenario: AC02 — Log out
   Given Ana is logged in
@@ -355,6 +250,12 @@ Scenario: AC08 — The password is case-sensitive
 
 Scenario: AC09 — The message doesn't reveal whether the email exists
   Then the message shown in AC03 and in AC04 is exactly the same
+
+Scenario: AC10 — See who is logged in
+  Given Ana Silva is logged in
+  When she opens any screen of the application, or reloads the page
+  Then her name "Ana Silva" is shown in the header
+  And she is still logged in
 ```
 
 ### US03 — Create a project
@@ -440,22 +341,26 @@ Scenario: AC06 — Repeated names are allowed
   And the two projects have independent tasks and members
 ```
 
-### US04 — View my projects
+### US04 — View my projects on the home dashboard
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 4 | FR07, NFR03 | US03 |
+| Must (MVP) | 4 | FR07, NFR03 | US03, US05 |
 
 #### User story
 
 **As a** user,
-**I want** to see the list of projects I am a member of,
-**so that** I can quickly get to the work in each one.
+**I want** a home dashboard with the projects I am a member of and how many tasks each one has in each status,
+**so that** I can see where the work stands and quickly get to each project.
 
 #### Rules
 
-- For each project, the list shows the name and the user's role: "Manager" or "Member".
+- The home dashboard is the first screen after logging in.
+- For each project, the list shows the name, the user's role ("Manager" or "Member") and the number of its tasks in "To do", "In progress" and "Done".
+- A line "All my projects" at the top shows the same three counts added up across all the user's projects. It always covers every project, even while a search narrows the list (D14, US23).
 - The list is sorted alphabetically by name, case-insensitively.
+- Clicking a project opens its board (US06).
+- The counts are plain numbers, not charts or reports (C02).
 
 #### Acceptance criteria
 
@@ -466,17 +371,26 @@ Scenario: AC01 — See the projects I am a member of
   Given Ana is the manager of the project "Website"
   And Ana is a member of the project "App"
   And there is a project "Shop" that Ana is not a member of
-  When Ana opens the project list
+  When Ana opens the home dashboard
   Then the list shows, in this order:
     | project | role    |
     | App     | Member  |
     | Website | Manager |
   And the project "Shop" is not shown
 
-Scenario: AC02 — Open a project from the list
-  Given the project "Website" appears in Ana's project list
+Scenario: AC02 — Open a project from the dashboard
+  Given the project "Website" appears on Ana's home dashboard
   When Ana opens the project "Website"
-  Then the task list of the project "Website" is shown (US06)
+  Then the board of the project "Website" is shown (US06)
+
+Scenario: AC07 — Task counts per project and in total
+  Given the project "App" has 4 tasks in "To do", 1 in "In progress" and 7 in "Done"
+  And the project "Website" has 3 tasks in "To do", 2 in "In progress" and 5 in "Done"
+  And Ana is a member of both
+  When Ana opens the home dashboard
+  Then "App" shows "To do 4", "In progress 1" and "Done 7"
+  And "Website" shows "To do 3", "In progress 2" and "Done 5"
+  And "All my projects" shows "To do 7", "In progress 3" and "Done 12"
 ```
 
 ##### Exceptional situations
@@ -484,14 +398,16 @@ Scenario: AC02 — Open a project from the list
 ```gherkin
 Scenario: AC03 — Not a member of any project
   Given Ana is not a member of any project
-  When she opens the project list
+  When she opens the home dashboard
   Then the message "You are not a member of any project yet." is shown
+  And the line "All my projects" is not shown
 
 Scenario: AC04 — Removed from a project
   Given Ana was a member of the project "App"
   And the manager removed Ana from the project "App" (US09)
-  When Ana opens the project list
+  When Ana opens the home dashboard
   Then the project "App" is not shown
+  And its tasks are not counted in "All my projects"
   And if Ana tries to open the project "App" directly, the message "Project not found." is shown
 ```
 
@@ -500,15 +416,27 @@ Scenario: AC04 — Removed from a project
 ```gherkin
 Scenario: AC05 — Case-insensitive sorting
   Given Ana is a member of the projects "beta", "Alpha" and "Gamma"
-  When she opens the project list
+  When she opens the home dashboard
   Then the order shown is "Alpha", "beta", "Gamma"
 
 Scenario: AC06 — Projects with the same name
   Given Ana is a member of two different projects called "Website"
-  When she opens the project list
-  Then two "Website" entries are shown
+  When she opens the home dashboard
+  Then two "Website" entries are shown, each with its own counts
   And each one opens its own project
+
+Scenario: AC08 — Project without tasks
+  Given Ana is a member of the project "Intranet", which has no tasks
+  When she opens the home dashboard
+  Then "Intranet" shows "To do 0", "In progress 0" and "Done 0"
+
+Scenario: AC09 — Counts reflect other members' changes (NFR07)
+  Given Rui moved a task of the project "Website" from "To do" to "Done"
+  When Ana opens the home dashboard after that change
+  Then the counts of "Website" and of "All my projects" include the change
 ```
+
+AC07 to AC09 were added when the project list became the home dashboard ([scope reconciliation](reviews/scope-reconciliation.md), SC13).
 
 ### US05 — Create a task
 
@@ -529,8 +457,9 @@ Scenario: AC06 — Projects with the same name
 | Title | Required, between 1 and 200 characters. |
 | Description | Optional, up to 5000 characters. |
 | Due date | Optional. Must be a valid date and can't be earlier than the current day (D12). |
+| Priority | One of "Low", "Medium" or "High". Optional when creating: "Medium" if not chosen. |
 
-A new task always starts in the "To do" status and with no assignee ("Unassigned").
+A new task always starts in the "To do" status and with no assignees ("Unassigned").
 
 #### Acceptance criteria
 
@@ -544,14 +473,15 @@ Scenario: AC01 — Create a task with every field
     | title       | Design home page        |
     | description | Follow the style guide  |
     | due date    | 2026-11-20              |
+    | priority    | High                    |
   Then the task "Design home page" is created in the project "Website" with that data
   And the task status is "To do"
-  And the task has no assignee ("Unassigned")
-  And the task appears in the project's task list (US06)
+  And the task has no assignees ("Unassigned")
+  And the task appears on the project's board (US06)
 
 Scenario: AC02 — Create a task with only a title
   When Ana creates a task in the project "Website" with only the title "Review copy"
-  Then the task "Review copy" is created with no description and no due date
+  Then the task "Review copy" is created with no description, no due date and the priority "Medium"
 ```
 
 ##### Exceptional situations
@@ -582,7 +512,14 @@ Scenario: AC06 — Create a task in a project I'm not a member of
   When Rui tries to create a task in the project "Website"
   Then the message "Project not found." is shown
   And no task is created
+
+Scenario: AC10 — Invalid priority
+  When the task is requested to be created with the priority "Urgent"
+  Then the message "Invalid priority." is shown
+  And no task is created
 ```
+
+AC10 was added with the task priority ([scope reconciliation](reviews/scope-reconciliation.md), SC06).
 
 ##### Edge cases
 
@@ -617,16 +554,16 @@ Scenario: AC09 — Repeated titles in the same project
 #### User story
 
 **As a** project member,
-**I want** to see all the project's tasks with each one's status and assignee,
+**I want** to see all the project's tasks with each one's status, priority and assignees,
 **so that** I have an overview of the work and its progress.
 
 #### Rules
 
-- Each task shows its title, status, assignee and due date (if any).
-- The assignee is shown as:
-  - the person's name;
-  - the team's name, followed by "(team)";
-  - "Unassigned", if there is no assignee.
+- Each task shows its title, priority, assignees and due date (if any).
+- The assignees are listed, separated by commas, as:
+  - each person's name;
+  - each team's name, followed by "(team)";
+  - "Unassigned", if the task has no assignees.
 - Tasks are shown as a board with one column per status, in this order: "To do", "In progress", "Done".
 - Each column shows the number of tasks in it.
 - Within each column, tasks are sorted from newest to oldest by creation date.
@@ -641,16 +578,16 @@ Shared context for all scenarios: Ana is a member of the project "Website".
 ```gherkin
 Scenario: AC01 — See the project's tasks
   Given the project "Website" has these tasks, created in this order:
-    | title         | status      | assignee  | due date   |
-    | Review copy   | Done        | Rui Costa |            |
-    | Create logo   | In progress | Design    | 2026-11-20 |
-    | Test the site | To do       |           |            |
+    | title         | status      | priority | assignees         | due date   |
+    | Review copy   | Done        | Low      | Rui Costa         |            |
+    | Create logo   | In progress | High     | Design, Sara Lopes | 2026-11-20 |
+    | Test the site | To do       | Medium   |                   |            |
   And "Design" is a team
   When Ana opens the project "Website"
   Then the board shows the columns "To do", "In progress" and "Done", in this order, each with 1 task
-  And the column "To do" shows "Test the site", assigned to "Unassigned", with no due date
-  And the column "In progress" shows "Create logo", assigned to "Design (team)", with the due date 2026-11-20
-  And the column "Done" shows "Review copy", assigned to "Rui Costa", with no due date
+  And the column "To do" shows "Test the site", priority "Medium", assigned to "Unassigned", with no due date
+  And the column "In progress" shows "Create logo", priority "High", assigned to "Design (team), Sara Lopes", with the due date 2026-11-20
+  And the column "Done" shows "Review copy", priority "Low", assigned to "Rui Costa", with no due date
 
 Scenario: AC06 — Newest first within a column
   Given the project "Website" has the tasks "Write the privacy page" and then "Test the site", both in "To do"
@@ -658,7 +595,7 @@ Scenario: AC06 — Newest first within a column
   Then the column "To do" shows "Test the site" above "Write the privacy page"
 ```
 
-AC01 was changed and AC06 added when the task list became a board (see the [UI wireframe](ui/README.md)). AC06 comes after AC05 in numbering.
+AC01 was changed and AC06 added when the task list became a board (see the [UI wireframe](ui/README.md)). AC06 comes after AC05 in numbering. AC01 was changed again to show the priority and several assignees ([scope reconciliation](reviews/scope-reconciliation.md), SC06, SC07). Clicking a card opens the task's details (US20).
 
 ##### Exceptional situations
 
@@ -706,7 +643,7 @@ Scenario: AC05 — The list reflects other members' changes (NFR07)
 
 - The possible statuses are "To do", "In progress" and "Done".
 - Any transition between statuses is allowed, including going back.
-- Any project member can change the status of any task in the project, even if they aren't the assignee (D08).
+- Any project member can change the status of any task in the project, even if they aren't one of its assignees (D08).
 - Changing the status doesn't change any other field of the task.
 
 #### Acceptance criteria
@@ -719,7 +656,7 @@ Shared context for all scenarios: Ana and Rui are members of the project "Websit
 Scenario: AC01 — Change a task's status
   When Ana changes the status of the task "Test the site" to "In progress"
   Then the task status becomes "In progress"
-  And the title, description, due date and assignee don't change
+  And the title, description, due date, priority and assignees don't change
 
 Scenario Outline: AC02 — Every transition is allowed
   Given the task "Test the site" is in the status <from>
@@ -764,8 +701,8 @@ Scenario: AC06 — Choose the current status
   Then the task status stays "To do"
   And no error message is shown
 
-Scenario: AC07 — Member who is not the assignee
-  Given the task "Test the site" is assigned to Rui
+Scenario: AC07 — Member who is not an assignee
+  Given the task "Test the site" is assigned only to Rui
   When Ana changes the task status to "Done"
   Then the task status becomes "Done"
 
@@ -785,13 +722,13 @@ Scenario: AC08 — Two simultaneous changes (D11)
 #### User story
 
 **As a** project member,
-**I want** to edit a task's title, description and due date,
+**I want** to edit a task's title, description, due date and priority,
 **so that** I can keep the task's information correct without recreating it.
 
 #### Rules
 
 - Field validations are the same as in [US05](#us05--create-a-task).
-- Editing doesn't change the task's status or assignee.
+- Editing doesn't change the task's status or assignees.
 - The description and due date can be cleared.
 - Any project member can edit any task in the project (D08).
 
@@ -799,9 +736,9 @@ Scenario: AC08 — Two simultaneous changes (D11)
 
 Shared context for all scenarios: Ana is a member of the project "Website", today is 2026-11-02 and the project has this task:
 
-| title | description | due date | status | assignee |
-|---|---|---|---|---|
-| Test the site | Test on mobile | 2026-11-20 | In progress | Rui Costa |
+| title | description | due date | priority | status | assignees |
+|---|---|---|---|---|---|
+| Test the site | Test on mobile | 2026-11-20 | Medium | In progress | Rui Costa |
 
 ##### Main scenario
 
@@ -811,9 +748,10 @@ Scenario: AC01 — Edit every field
     | title       | Test the site in production |
     | description | Test on mobile and tablet   |
     | due date    | 2026-11-25                  |
+    | priority    | High                        |
   Then the task has that data
   And the status stays "In progress"
-  And the assignee stays "Rui Costa"
+  And the assignees stay "Rui Costa"
 
 Scenario: AC02 — Clear the description and due date
   When Ana clears the description and due date of the task "Test the site"
@@ -843,7 +781,14 @@ Scenario: AC06 — User who is not a project member
   When Marta tries to edit the task "Test the site"
   Then the message "Project not found." is shown
   And the task keeps all its previous data
+
+Scenario: AC10 — Invalid priority
+  When Ana changes the priority of the task "Test the site" to "Urgent"
+  Then the message "Invalid priority." is shown
+  And the priority stays "Medium"
 ```
+
+AC10 was added with the task priority ([scope reconciliation](reviews/scope-reconciliation.md), SC06).
 
 ##### Edge cases
 
@@ -870,7 +815,7 @@ Scenario: AC09 — Two simultaneous edits (D11)
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 9 | FR06, NFR03 | US03 |
+| Must (MVP) | 10 | FR06, NFR03 | US03 |
 
 #### User story
 
@@ -884,7 +829,7 @@ Scenario: AC09 — Two simultaneous edits (D11)
 - Every member sees the project's member list, with each member's name, email and role ("Manager" or "Member").
 - Only the manager can add and remove members.
 - The manager can't be removed (D07).
-- When a member is removed, the tasks assigned to that person in the project become unassigned. Tasks assigned to teams don't change (D10).
+- When a member is removed, that person is removed from the assignees of every task in the project. Other assignees, including teams, don't change (D10).
 
 #### Acceptance criteria
 
@@ -905,12 +850,14 @@ Scenario: AC02 — Remove a member
   Then Rui is no longer a member of the project
   And the project "Website" no longer appears in Rui's project list
 
-Scenario: AC03 — The removed member's tasks become unassigned (D10)
+Scenario: AC03 — The removed member is removed from the tasks' assignees (D10)
   Given Rui is a member of the project "Website" and of the team "Design"
-  And the task "Create logo" is assigned to Rui
+  And the task "Create logo" is assigned only to Rui
+  And the task "Write copy" is assigned to Rui and Sara
   And the task "Create icons" is assigned to the team "Design"
   When Ana removes Rui from the project "Website"
   Then the task "Create logo" becomes unassigned ("Unassigned")
+  And the task "Write copy" stays assigned to Sara only
   And the task "Create icons" stays assigned to the team "Design"
 ```
 
@@ -967,47 +914,52 @@ Scenario: AC09 — Member removed and added again
   And the task "Create logo" stays unassigned
 ```
 
-### US10 — Assign a task to a person
+### US10 — Assign people to a task
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 10 | FR14 | US05, US09 |
+| Must (MVP) | 11 | FR14 | US05, US09 |
 
 #### User story
 
 **As a** project member,
-**I want** to assign a task to a project member, or undo that assignment,
+**I want** to assign one or more project members to a task, and remove any of them,
 **so that** it's clear who is responsible for it.
 
 #### Rules
 
-- A task has at most one assignee: a person or a team ([US13](#us13--assign-a-task-to-a-team)).
-- A task can only be assigned to a person who is a project member.
-- Assigning a task that already has an assignee replaces the previous assignee.
-- Any project member can assign any task in the project (D08).
+- A task can have several assignees: people and teams ([US13](#us13--assign-a-team-to-a-task)). It can also have none ("Unassigned").
+- A person is **eligible** if they are a member of the task's project at the moment of assignment.
+- People are added and removed one at a time. Adding a person doesn't remove the other assignees.
+- Any project member can add or remove any assignee of any task in the project (D08).
 
 #### Acceptance criteria
 
-Shared context for all scenarios: Ana and Rui are members of the project "Website", which has the task "Test the site" with no assignee.
+Shared context for all scenarios: Ana, Rui and Sara are members of the project "Website", which has the task "Test the site" with no assignees.
 
 ##### Main scenario
 
 ```gherkin
-Scenario: AC01 — Assign to a member
-  When Ana assigns the task "Test the site" to Rui
-  Then the task's assignee becomes Rui
-  And the task list shows "Rui Costa" as the assignee
+Scenario: AC01 — Assign a member
+  When Ana assigns Rui to the task "Test the site"
+  Then Rui becomes an assignee of the task
+  And the board shows "Rui Costa" as the task's assignees
 
-Scenario: AC02 — Replace the assignee
+Scenario: AC02 — Assign several members
   Given the task "Test the site" is assigned to Rui
-  When Ana assigns the task to herself
-  Then the task's assignee becomes Ana
-  And Rui is no longer responsible for the task
+  When Ana assigns Sara to the task
+  Then the task's assignees are Rui and Sara
+  And the board shows "Rui Costa, Sara Lopes"
 
-Scenario: AC03 — Undo the assignment
-  Given the task "Test the site" is assigned to Rui
-  When Ana undoes the task's assignment
-  Then the task becomes unassigned ("Unassigned")
+Scenario: AC03 — Remove an assignee
+  Given the task "Test the site" is assigned to Rui and Sara
+  When Ana removes Rui from the task's assignees
+  Then the task's assignees are Sara only
+
+Scenario: AC10 — Remove the last assignee
+  Given the task "Test the site" is assigned only to Rui
+  When Ana removes Rui from the task's assignees
+  Then the task has no assignees ("Unassigned")
 ```
 
 ##### Exceptional situations
@@ -1015,49 +967,51 @@ Scenario: AC03 — Undo the assignment
 ```gherkin
 Scenario: AC04 — Person who is not a project member
   Given Marta is not a member of the project "Website"
-  When Ana tries to assign the task "Test the site" to Marta
+  When Ana tries to assign Marta to the task "Test the site"
   Then the message "The assignee must be a member of the project." is shown
-  And the task stays unassigned
+  And the task's assignees don't change
 
 Scenario: AC05 — Member removed in the meantime
-  Given Ana opened the task "Test the site" to assign it to Rui
+  Given Ana opened the task "Test the site" to assign Rui
   And in the meantime the manager removed Rui from the project
-  When Ana confirms the assignment to Rui
+  When Ana confirms the assignment of Rui
   Then the message "The assignee must be a member of the project." is shown
-  And the task stays unassigned
+  And the task's assignees don't change
 
 Scenario: AC06 — User who is not a project member
   Given Marta is not a member of the project "Website"
-  When Marta tries to assign the task "Test the site"
+  When Marta tries to change the assignees of the task "Test the site"
   Then the message "Project not found." is shown
-  And the task stays unassigned
+  And the task's assignees don't change
 ```
 
 ##### Edge cases
 
 ```gherkin
-Scenario: AC07 — Assign to the current assignee
+Scenario: AC07 — Assign someone who is already an assignee
   Given the task "Test the site" is assigned to Rui
-  When Ana assigns the task to Rui
-  Then the assignee stays Rui
+  When Ana assigns Rui to the task again
+  Then the task's assignees stay Rui only
   And no error message is shown
 
-Scenario: AC08 — Undo the assignment of an unassigned task
-  Given the task "Test the site" has no assignee
-  When Ana undoes the assignment
-  Then the task stays unassigned
+Scenario: AC08 — Remove someone who isn't an assignee
+  Given the task "Test the site" is assigned only to Rui
+  When Ana removes Sara from the task's assignees
+  Then the task's assignees stay Rui only
   And no error message is shown
 
 Scenario: AC09 — Assigning doesn't change other fields
-  When Ana assigns the task "Test the site" to Rui
-  Then the task's title, description, due date and status don't change
+  When Ana assigns Rui to the task "Test the site"
+  Then the task's title, description, due date, priority and status don't change
 ```
+
+The story was rewritten when a task became able to have several assignees ([scope reconciliation](reviews/scope-reconciliation.md), SC07). AC10 comes after AC09 in numbering.
 
 ### US11 — Create a team
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 11 | FR08 | US02 |
+| Must (MVP) | 12 | FR08 | US02 |
 
 #### User story
 
@@ -1132,7 +1086,7 @@ Scenario Outline: AC05 — Name limits
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 12 | FR09 | US11 |
+| Must (MVP) | 13 | FR09 | US11 |
 
 #### User story
 
@@ -1224,24 +1178,23 @@ Scenario: AC08 — Changing the team doesn't undo existing assignments (D09)
   And Marta still has no access to the project "Website"
 ```
 
-### US13 — Assign a task to a team
+### US13 — Assign a team to a task
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 13 | FR14 | US10, US12 |
+| Must (MVP) | 14 | FR14 | US10, US12 |
 
 #### User story
 
 **As a** project member,
-**I want** to assign a task to a team,
+**I want** to assign a team to a task, and remove it,
 **so that** a group of people is jointly responsible for it.
 
 #### Rules
 
-- A task has at most one assignee: a person ([US10](#us10--assign-a-task-to-a-person)) or a team.
-- A task can only be assigned to a team whose members are all project members. This rule is only checked at the moment of assignment (D09).
-- Assigning replaces the previous assignee, whether a person or another team.
-- An assignment to a team is undone the same way as an assignment to a person (US10, AC03).
+- A team is one more assignee of the task, next to people and other teams ([US10](#us10--assign-people-to-a-task)).
+- A team is **eligible** if all its members are project members. This rule is only checked at the moment of assignment (D09).
+- Adding a team doesn't remove the other assignees. A team is removed from a task the same way as a person (US10, AC03).
 
 #### Acceptance criteria
 
@@ -1250,23 +1203,22 @@ Shared context for all scenarios: Ana, Rui and Sara are members of the project "
 ##### Main scenario
 
 ```gherkin
-Scenario: AC01 — Assign to a team
-  Given the task "Create icons" has no assignee
-  When Ana assigns the task "Create icons" to the team "Design"
-  Then the task's assignee becomes the team "Design"
-  And the task list shows "Design (team)" as the assignee
+Scenario: AC01 — Assign a team
+  Given the task "Create icons" has no assignees
+  When Ana assigns the team "Design" to the task "Create icons"
+  Then the team "Design" becomes an assignee of the task
+  And the board shows "Design (team)" as the task's assignees
 
-Scenario: AC02 — Replace a person with a team
-  Given the task "Create icons" is assigned to Rui
-  When Ana assigns the task to the team "Design"
-  Then the task's assignee becomes the team "Design"
-  And Rui is no longer individually responsible for the task
+Scenario: AC02 — A team next to a person
+  Given the task "Create icons" is assigned to Ana
+  When Ana assigns the team "Design" to the task
+  Then the task's assignees are Ana and the team "Design"
+  And the board shows "Ana Silva, Design (team)"
 
-Scenario: AC03 — Replace a team with a person
-  Given the task "Create icons" is assigned to the team "Design"
-  When Ana assigns the task to Sara
-  Then the task's assignee becomes Sara
-  And the team "Design" is no longer responsible for the task
+Scenario: AC03 — Remove a team
+  Given the task "Create icons" is assigned to Ana and the team "Design"
+  When Ana removes the team "Design" from the task's assignees
+  Then the task's assignees are Ana only
 ```
 
 ##### Exceptional situations
@@ -1275,14 +1227,14 @@ Scenario: AC03 — Replace a team with a person
 Scenario: AC04 — Team with members outside the project
   Given the team "Marketing" has Rui and Marta as members
   And Marta is not a member of the project "Website"
-  When Ana tries to assign the task "Create icons" to the team "Marketing"
+  When Ana tries to assign the team "Marketing" to the task "Create icons"
   Then the message "All team members must belong to the project." is shown
-  And the task's assignee doesn't change
+  And the task's assignees don't change
 
 Scenario: AC05 — Non-existent team
-  When Ana tries to assign the task "Create icons" to a team that doesn't exist
+  When Ana tries to assign a team that doesn't exist to the task "Create icons"
   Then the message "Team not found." is shown
-  And the task's assignee doesn't change
+  And the task's assignees don't change
 ```
 
 ##### Edge cases
@@ -1290,8 +1242,8 @@ Scenario: AC05 — Non-existent team
 ```gherkin
 Scenario: AC06 — Team with no members besides the manager
   Given the team "QA" has only Ana as a member
-  When Ana assigns the task "Create icons" to the team "QA"
-  Then the task's assignee becomes the team "QA"
+  When Ana assigns the team "QA" to the task "Create icons"
+  Then the team "QA" becomes an assignee of the task
 
 Scenario: AC07 — Team members change after the assignment (D09)
   Given the task "Create icons" is assigned to the team "Design"
@@ -1302,13 +1254,21 @@ Scenario: AC08 — Team member removed from the project (D10)
   Given the task "Create icons" is assigned to the team "Design"
   When the project manager removes Rui from the project "Website"
   Then the task "Create icons" stays assigned to the team "Design"
+
+Scenario: AC09 — Assign a team that is already an assignee
+  Given the task "Create icons" is assigned to the team "Design"
+  When Ana assigns the team "Design" to the task again
+  Then the task's assignees don't change
+  And no error message is shown
 ```
+
+The story was rewritten when a task became able to have several assignees ([scope reconciliation](reviews/scope-reconciliation.md), SC07, SC08).
 
 ### US14 — Edit a project
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 14 | FR04, NFR03 | US03 |
+| Must (MVP) | 15 | FR04, NFR03 | US03 |
 
 #### User story
 
@@ -1386,7 +1346,7 @@ Scenario: AC08 — Name used by another project (D06)
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 15 | FR05, NFR03, NFR05 | US03, US05 |
+| Must (MVP) | 16 | FR05, NFR03, NFR05 | US03, US05 |
 
 #### User story
 
@@ -1398,7 +1358,7 @@ Scenario: AC08 — Name used by another project (D06)
 
 - Only the project manager can delete the project (NFR03).
 - Before deleting, the user must confirm (NFR05). The confirmation shows the message `Delete "<project name>" and all its tasks? This can't be undone.` with two choices: "Delete project" and "Cancel".
-- Deleting a project also deletes all its tasks and all its memberships, in one operation (FR05). Teams aren't affected, even if tasks were assigned to them.
+- Deleting a project also deletes all its tasks, their comments and all its memberships, in one operation (FR05). Teams aren't affected, even if tasks were assigned to them.
 - After the deletion, the project is no longer accessible to anyone: it gets "Project not found." (DoD03).
 
 #### Acceptance criteria
@@ -1458,7 +1418,7 @@ Scenario: AC07 — Project without tasks
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 16 | FR12, NFR05 | US05 |
+| Must (MVP) | 17 | FR12, NFR05 | US05 |
 
 #### User story
 
@@ -1470,6 +1430,7 @@ Scenario: AC07 — Project without tasks
 
 - Any project member can delete any task of the project (D08).
 - Before deleting, the user must confirm (NFR05). The confirmation shows the message `Delete "<task title>"? This can't be undone.` with two choices: "Delete task" and "Cancel".
+- Deleting a task also deletes its comments.
 - A deleted task disappears from the board for every member (NFR07).
 
 #### Acceptance criteria
@@ -1514,8 +1475,8 @@ Scenario: AC05 — Task already deleted by another member (DoD05)
 ##### Edge cases
 
 ```gherkin
-Scenario: AC06 — Member who is not the assignee (D08)
-  Given the task "Create logo" is assigned to Rui
+Scenario: AC06 — Member who is not an assignee (D08)
+  Given the task "Create logo" is assigned only to Rui
   When Ana deletes the task "Create logo" and confirms
   Then the task is deleted
 
@@ -1529,7 +1490,7 @@ Scenario: AC07 — Delete the last task
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 17 | FR19, NFR03 | US11 |
+| Must (MVP) | 18 | FR19, NFR03 | US11 |
 
 #### User story
 
@@ -1541,7 +1502,7 @@ Scenario: AC07 — Delete the last task
 
 - The name rules are the same as in [US11](#us11--create-a-team): 1 to 50 characters, unique among all teams ignoring case (D06).
 - Only the team manager can rename the team (NFR03).
-- Tasks assigned to the team keep their assignment and show the new name.
+- Tasks assigned to the team keep the team as an assignee and show the new name.
 
 #### Acceptance criteria
 
@@ -1554,7 +1515,7 @@ Scenario: AC01 — Rename a team
   Given the task "Create logo" is assigned to the team "Design"
   When Ana renames the team "Design" to "Product design"
   Then the team is called "Product design"
-  And the task "Create logo" shows "Product design (team)" as its assignee
+  And the task "Create logo" shows "Product design (team)" among its assignees
 ```
 
 ##### Exceptional situations
@@ -1596,7 +1557,7 @@ Scenario: AC07 — Name too long
 
 | Priority | Order | Requirements | Depends on |
 |---|---|---|---|
-| Must (MVP) | 18 | FR20, NFR03, NFR05 | US11, US13 |
+| Must (MVP) | 19 | FR20, NFR03, NFR05 | US11, US13 |
 
 #### User story
 
@@ -1607,20 +1568,20 @@ Scenario: AC07 — Name too long
 #### Rules
 
 - Only the team manager can delete the team (NFR03).
-- Before deleting, the user must confirm (NFR05). The confirmation shows the message `Delete the team "<team name>"? Its tasks will become unassigned. This can't be undone.` with two choices: "Delete team" and "Cancel".
-- Deleting a team deletes its memberships. Every task assigned to the team, in any project, becomes unassigned, in the same operation (FR20).
+- Before deleting, the user must confirm (NFR05). The confirmation shows the message `Delete the team "<team name>"? It will be removed from its tasks. This can't be undone.` with two choices: "Delete team" and "Cancel".
+- Deleting a team deletes its memberships, and removes the team from the assignees of every task, in any project, in the same operation (FR20). The tasks' other assignees don't change.
 - The team's members keep their accounts and their project memberships.
 
 #### Acceptance criteria
 
-Shared context for all scenarios: Ana is the manager of the team "Design", whose members are Ana and Rui. The task "Create logo" of the project "Website" is assigned to the team "Design".
+Shared context for all scenarios: Ana is the manager of the team "Design", whose members are Ana and Rui. In the project "Website", the task "Create logo" is assigned only to the team "Design", and the task "Create icons" is assigned to the team "Design" and to Sara.
 
 ##### Main scenario
 
 ```gherkin
 Scenario: AC01 — Confirmation before deleting (NFR05)
   When Ana chooses to delete the team "Design"
-  Then the message 'Delete the team "Design"? Its tasks will become unassigned. This can't be undone.' is shown
+  Then the message 'Delete the team "Design"? It will be removed from its tasks. This can't be undone.' is shown
   And the choices "Delete team" and "Cancel" are shown
   And nothing is deleted yet
 
@@ -1628,6 +1589,7 @@ Scenario: AC02 — Delete a team
   When Ana chooses to delete the team "Design" and confirms with "Delete team"
   Then the team "Design" no longer appears in the team list
   And the task "Create logo" becomes unassigned ("Unassigned")
+  And the task "Create icons" stays assigned to Sara only
   And Rui is still a member of the project "Website"
 
 Scenario: AC03 — Cancel the deletion
@@ -1661,4 +1623,519 @@ Scenario: AC07 — The name becomes available again
   Given Ana deleted the team "Design"
   When any user creates a team called "Design"
   Then the new team is created
+```
+
+### US19 — Use the demo accounts
+
+| Priority | Order | Requirements | Depends on |
+|---|---|---|---|
+| Must (MVP) | 1 | FR21, NFR04 | — |
+
+#### User story
+
+**As a** person demonstrating or trying Matriz,
+**I want** demo accounts to exist from the start,
+**so that** I can log in without signing up.
+
+#### Rules
+
+- The demo accounts are created by a seed when the application is set up. Public registration is not needed (FR01 is an optional extension).
+- Their names and emails are made up and don't belong to real people (PRI05).
+- Their passwords are never written in the repository or the documentation. They come from configuration kept outside the repository (SEC10).
+- Their passwords are protected like any other password (NFR04).
+- How many accounts there are and how the seed is run are decided with the technology stack (PD12).
+
+#### Acceptance criteria
+
+##### Main scenario
+
+```gherkin
+Scenario: AC01 — Log in with a demo account
+  Given the application was set up with the seed
+  And the configuration gives the password of the demo account "ana@example.com"
+  When a visitor logs in with "ana@example.com" and that password
+  Then they are logged in (US02)
+```
+
+##### Exceptional situations
+
+```gherkin
+Scenario: AC02 — No password in the repository
+  When the repository and the documentation are searched for the demo accounts' passwords
+  Then none of the passwords is found
+```
+
+##### Edge cases
+
+```gherkin
+Scenario: AC03 — Demo passwords not stored in readable text (NFR04)
+  Given the seed created the demo accounts
+  When the stored data for those accounts is inspected
+  Then no password appears in readable text, or as Base64 or hexadecimal
+```
+
+### US20 — View a task's details
+
+| Priority | Order | Requirements | Depends on |
+|---|---|---|---|
+| Must (MVP) | 9 | FR22 | US06 |
+
+#### User story
+
+**As a** project member,
+**I want** to open a task and see all its information,
+**so that** I can read its description, see who is working on it and follow the discussion.
+
+#### Rules
+
+- Clicking a task on the board opens its details.
+- The details show the title, description, status, priority, due date, assignees and comments (US21).
+- From the details, the member can edit the task (US08), change its assignees (US10, US13), delete it (US16) and comment on it (US21).
+
+#### Acceptance criteria
+
+Shared context for all scenarios: Ana is a member of the project "Website", which has the task "Create logo" with the description "Use the new colours", the status "In progress", the priority "High", the due date 2026-11-20, the assignees "Design (team)" and "Sara Lopes", and one comment.
+
+##### Main scenario
+
+```gherkin
+Scenario: AC01 — Open a task
+  When Ana opens the task "Create logo" from the board
+  Then she sees the title "Create logo" and the description "Use the new colours"
+  And the status "In progress", the priority "High" and the due date 2026-11-20
+  And the assignees "Design (team), Sara Lopes"
+  And the task's comment
+```
+
+##### Exceptional situations
+
+```gherkin
+Scenario: AC02 — User who is not a project member
+  Given Marta is not a member of the project "Website"
+  When Marta tries to open the task "Create logo"
+  Then the message "Project not found." is shown
+  And no task data is shown
+
+Scenario: AC03 — Task deleted in the meantime (DoD05)
+  Given Rui deleted the task "Create logo"
+  When Ana tries to open it
+  Then the message "Task not found." is shown
+```
+
+##### Edge cases
+
+```gherkin
+Scenario: AC04 — Task with only a title
+  Given the task "Review copy" has no description, no due date, no assignees and no comments
+  When Ana opens it
+  Then she sees "No description", "No due date", "Unassigned" and "No comments yet."
+```
+
+### US21 — Comment on a task
+
+| Priority | Order | Requirements | Depends on |
+|---|---|---|---|
+| Must (MVP) | 20 | FR23 | US20 |
+
+#### User story
+
+**As a** project member,
+**I want** to add comments to a task and read the others' comments,
+**so that** we can discuss the work where it is recorded.
+
+#### Rules
+
+| Field | Rules |
+|---|---|
+| Text | Required, between 1 and 2000 characters. |
+
+- Any project member can comment on any task of the project.
+- Each comment shows its author's name and the date and time it was added.
+- Comments are listed from oldest to newest.
+- A comment stays when its author is removed from the project (D13).
+
+#### Acceptance criteria
+
+Shared context for all scenarios: Ana and Rui are members of the project "Website", which has the task "Create logo".
+
+##### Main scenario
+
+```gherkin
+Scenario: AC01 — Add a comment
+  When Ana adds the comment "First draft is ready" to the task "Create logo" on 2026-11-10 at 14:30
+  Then the comment appears in the task's details
+  And it shows the author "Ana Silva" and the date and time 2026-11-10 14:30
+
+Scenario: AC02 — List the comments
+  Given Ana commented "First draft is ready" and then Rui commented "Looks good"
+  When Rui opens the task "Create logo"
+  Then he sees "First draft is ready" above "Looks good"
+```
+
+##### Exceptional situations
+
+```gherkin
+Scenario Outline: AC03 — Missing text
+  When Ana adds the comment <text>
+  Then the message "Comment is required." is shown
+  And no comment is added
+
+  Examples:
+    | text  |
+    | ""    |
+    | "   " |
+
+Scenario: AC04 — User who is not a project member
+  Given Marta is not a member of the project "Website"
+  When Marta tries to read or add comments on the task "Create logo"
+  Then the message "Project not found." is shown
+  And no comment is shown or added
+```
+
+##### Edge cases
+
+```gherkin
+Scenario Outline: AC05 — Text limits
+  When Ana adds a comment of <n> characters
+  Then the result is <result>
+
+  Examples:
+    | n    | result                                               |
+    | 2000 | the comment is added                                 |
+    | 2001 | the message "Comment must be at most 2000 characters." |
+
+Scenario: AC06 — Author removed from the project (D13)
+  Given Rui commented "Looks good" on the task "Create logo"
+  When the manager removes Rui from the project "Website"
+  Then the comment "Looks good" still shows the author "Rui Costa"
+
+Scenario: AC07 — Task without comments
+  Given the task "Create logo" has no comments
+  When Ana opens it
+  Then the message "No comments yet." is shown
+```
+
+### US22 — Edit or delete my comment
+
+| Priority | Order | Requirements | Depends on |
+|---|---|---|---|
+| Must (MVP) | 21 | FR23, NFR03, NFR05 | US21 |
+
+#### User story
+
+**As a** project member who wrote a comment,
+**I want** to edit or delete it,
+**so that** I can correct or withdraw what I wrote.
+
+#### Rules
+
+- Only the comment's author can edit or delete it. Nobody else can, not even the project manager (NFR03).
+- Editing uses the same rules as adding a comment (US21). An edited comment shows "(edited)" next to its date.
+- Before deleting, the author must confirm (NFR05). The confirmation shows the message `Delete this comment? This can't be undone.` with two choices: "Delete comment" and "Cancel".
+
+#### Acceptance criteria
+
+Shared context for all scenarios: Ana is the manager of the project "Website" and Rui is a member. Rui added the comment "Looks good" to the task "Create logo".
+
+##### Main scenario
+
+```gherkin
+Scenario: AC01 — Edit my comment
+  When Rui edits his comment to "Looks good, but the icon is too small"
+  Then the comment shows the new text
+  And it shows "(edited)"
+
+Scenario: AC02 — Confirmation before deleting (NFR05)
+  When Rui chooses to delete his comment
+  Then the message "Delete this comment? This can't be undone." is shown
+  And the choices "Delete comment" and "Cancel" are shown
+  And nothing is deleted yet
+
+Scenario: AC03 — Delete my comment
+  When Rui chooses to delete his comment and confirms with "Delete comment"
+  Then the comment no longer appears in the task's details
+
+Scenario: AC04 — Cancel the deletion
+  When Rui chooses to delete his comment and then chooses "Cancel"
+  Then the comment still appears
+```
+
+##### Exceptional situations
+
+```gherkin
+Scenario: AC05 — Someone who isn't the author (NFR03)
+  When Ana, the project manager, tries to edit or delete Rui's comment
+  Then the message "Only the author can change this comment." is shown
+  And the comment doesn't change
+
+Scenario: AC06 — Text cleared
+  When Rui edits his comment to ""
+  Then the message "Comment is required." is shown
+  And the comment keeps the text "Looks good"
+
+Scenario: AC07 — Comment deleted in the meantime
+  Given Rui deleted his comment in another window
+  When he tries to edit or delete it again
+  Then the message "Comment not found." is shown
+```
+
+##### Edge cases
+
+```gherkin
+Scenario: AC08 — Save without changes
+  When Rui saves his comment without changing the text
+  Then the comment keeps its text
+  And no error message is shown
+```
+
+### US23 — Search my projects
+
+| Priority | Order | Requirements | Depends on |
+|---|---|---|---|
+| Must (MVP) | 22 | FR24 | US04 |
+
+#### User story
+
+**As a** user,
+**I want** to search my projects by name,
+**so that** I can find a project quickly when I belong to many.
+
+#### Rules
+
+- The search box is on the home dashboard (US04).
+- A project matches if its name contains the searched text, ignoring case and leading or trailing spaces (D01).
+- Only the projects the user is a member of are searched.
+- An empty search shows every project.
+- The totals in "All my projects" don't change with the search (D14).
+
+#### Acceptance criteria
+
+Shared context for all scenarios: Ana is a member of the projects "App", "Website" and "Web shop".
+
+##### Main scenario
+
+```gherkin
+Scenario: AC01 — Search by part of the name
+  When Ana searches for "web"
+  Then the list shows "Web shop" and "Website"
+  And "App" is not shown
+```
+
+##### Exceptional situations
+
+```gherkin
+Scenario: AC02 — No project matches
+  When Ana searches for "Intranet"
+  Then the message "No projects match your search." is shown
+
+Scenario: AC03 — Projects of other people aren't searched
+  Given there is a project "Website 2" that Ana is not a member of
+  When Ana searches for "Website"
+  Then "Website 2" is not shown
+```
+
+##### Edge cases
+
+```gherkin
+Scenario: AC04 — Clear the search
+  Given Ana searched for "web"
+  When she clears the search
+  Then the list shows "App", "Web shop" and "Website"
+
+Scenario: AC05 — Totals don't change (D14)
+  When Ana searches for "App"
+  Then the line "All my projects" still shows the counts of all three projects
+```
+
+### US24 — Filter a project's tasks
+
+| Priority | Order | Requirements | Depends on |
+|---|---|---|---|
+| Must (MVP) | 23 | FR17 | US06 |
+
+#### User story
+
+**As a** project member,
+**I want** to filter the board by status and priority,
+**so that** I can focus on the tasks that matter now.
+
+#### Rules
+
+- The member can choose one or more statuses and one or more priorities.
+- A task is shown if its status is one of the chosen statuses **and** its priority is one of the chosen priorities. With nothing chosen in a filter, that filter doesn't restrict anything.
+- Filtering by status shows only the columns of the chosen statuses.
+- Each column's count shows the number of tasks shown in it.
+- Filters are not saved: opening the project again shows every task.
+
+#### Acceptance criteria
+
+Shared context for all scenarios: Ana is a member of the project "Website", which has these tasks:
+
+| title | status | priority |
+|---|---|---|
+| Test the site | To do | High |
+| Write copy | To do | Low |
+| Create logo | In progress | High |
+| Review copy | Done | Medium |
+
+##### Main scenario
+
+```gherkin
+Scenario: AC01 — Filter by priority
+  When Ana filters by the priority "High"
+  Then the board shows "Test the site" and "Create logo"
+  And the columns show "To do 1", "In progress 1" and "Done 0"
+
+Scenario: AC02 — Filter by status and priority
+  When Ana filters by the status "To do" and the priorities "High" and "Low"
+  Then only the column "To do" is shown
+  And it shows "Test the site" and "Write copy"
+
+Scenario: AC03 — Clear the filters
+  Given Ana filtered by the priority "High"
+  When she clears the filters
+  Then the board shows every task
+```
+
+##### Exceptional situations
+
+```gherkin
+Scenario: AC04 — No task matches
+  When Ana filters by the status "Done" and the priority "High"
+  Then the message "No tasks match the filters." is shown
+
+Scenario: AC05 — Invalid filter value
+  When the tasks are requested with the priority "Urgent"
+  Then the message "Invalid priority." is shown
+```
+
+##### Edge cases
+
+```gherkin
+Scenario: AC06 — Filters are not saved
+  Given Ana filtered by the priority "High"
+  When she goes back to the home dashboard and opens the project "Website" again
+  Then the board shows every task
+```
+
+## 6. Optional extensions
+
+These stories are **not** in the MVP backlog. They describe optional extensions, kept ready in case they are brought back. FR01 is **Could** ([requirements.md](requirements.md), section 7).
+
+### US01 — Register an account
+
+| Priority | Order | Requirements | Depends on |
+|---|---|---|---|
+| Could (optional extension) | — | FR01, NFR04 | — |
+
+#### User story
+
+**As a** visitor,
+**I want** to create an account with my name, email and password,
+**so that** I can take part in Matriz projects.
+
+#### Rules
+
+| Field | Rules |
+|---|---|
+| Name | Required, between 1 and 100 characters. |
+| Email | Required, in the format `text@domain.extension`, at most 254 characters. Must be unique (case-insensitive, D03). |
+| Password | Required, between 8 and 128 characters. Spaces are not trimmed. |
+
+#### Acceptance criteria
+
+##### Main scenario
+
+```gherkin
+Scenario: AC01 — Successful sign-up
+  Given there is no account with the email "ana@example.com"
+  When the visitor signs up with the name "Ana Silva", the email "ana@example.com" and the password "secure123"
+  Then an account is created with the name "Ana Silva" and the email "ana@example.com"
+  And the visitor is logged in with that account
+  And the home dashboard is shown (US04)
+```
+
+##### Exceptional situations
+
+```gherkin
+Scenario: AC02 — Email already registered
+  Given an account with the email "ana@example.com" already exists
+  When the visitor signs up with the email "ana@example.com"
+  Then the message "This email is already in use." is shown
+  And no account is created
+
+Scenario: AC03 — Email already registered with different casing
+  Given an account with the email "ana@example.com" already exists
+  When the visitor signs up with the email "Ana@Example.COM"
+  Then the message "This email is already in use." is shown
+  And no account is created
+
+Scenario Outline: AC04 — Missing required fields
+  When the visitor signs up leaving the <field> field with the value <value>
+  Then the message <message> is shown
+  And no account is created
+
+  Examples:
+    | field    | value | message                 |
+    | name     | ""    | "Name is required."     |
+    | name     | "   " | "Name is required."     |
+    | email    | ""    | "Email is required."    |
+    | password | ""    | "Password is required." |
+
+Scenario Outline: AC05 — Invalid email format
+  When the visitor signs up with the email <email>
+  Then the message "Enter a valid email address." is shown
+  And no account is created
+
+  Examples:
+    | email             |
+    | "ana"             |
+    | "ana@"            |
+    | "ana.example.com" |
+    | "@example.com"    |
+    | "ana@example"     |
+```
+
+##### Edge cases
+
+```gherkin
+Scenario Outline: AC06 — Name limits
+  When the visitor signs up with a name of <n> characters
+  Then the result is <result>
+
+  Examples:
+    | n   | result                                              |
+    | 1   | the account is created                              |
+    | 100 | the account is created                              |
+    | 101 | the message "Name must be at most 100 characters."  |
+
+Scenario Outline: AC07 — Password limits
+  When the visitor signs up with a password of <n> characters
+  Then the result is <result>
+
+  Examples:
+    | n   | result                                                 |
+    | 7   | the message "Password must be at least 8 characters."  |
+    | 8   | the account is created                                 |
+    | 128 | the account is created                                 |
+    | 129 | the message "Password must be at most 128 characters." |
+
+Scenario: AC08 — Leading and trailing spaces in name and email
+  When the visitor signs up with the name "  Ana Silva  " and the email "  ana@example.com  "
+  Then the account is created with the name "Ana Silva" and the email "ana@example.com"
+```
+
+##### Password security (NFR04)
+
+```gherkin
+Scenario: AC09 — Password hidden while typing
+  When the visitor types the password in the sign-up form
+  Then each character is shown as a mask symbol, not as the typed character
+
+Scenario: AC10 — Password not stored in readable text
+  Given the visitor signed up with the password "secure123"
+  When the stored data for that account is inspected
+  Then the text "secure123" does not appear in any of the stored data
+  And decoding the stored value as Base64 or hexadecimal does not produce "secure123"
+  And a second account created with the password "secure123" stores a different value
 ```

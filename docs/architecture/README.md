@@ -6,9 +6,9 @@ Index and status of the architecture documents. At the user's request, this is a
 
 | Document | Status |
 |---|---|
-| [02-domain-model.md](02-domain-model.md) | Complete. Domain model of the MVP at two levels: business areas and conceptual model. |
+| [02-domain-model.md](02-domain-model.md) | Complete. Domain model of the MVP at two levels: business areas and conceptual model. Updated for the [scope reconciliation](../reviews/scope-reconciliation.md) (priority, several assignees, comments). |
 | [03-alternatives.md](03-alternatives.md) | Complete. Alternative B was chosen. Timeline updated to 3 weeks. |
-| [04-solution-architecture.md](04-solution-architecture.md) | Draft for the chosen architecture: modular monolith with simple layers inside each module. Updated for ADR-0002 (sessions); the "Session storage" risk is resolved. |
+| [04-solution-architecture.md](04-solution-architecture.md) | Draft for the chosen architecture: modular monolith with simple layers inside each module. Updated for ADR-0002 (sessions); the "Session storage" risk is resolved. Updated for the scope reconciliation: demo accounts, several assignees, comments, filters, and the home dashboard served by Tasks. The four modules and their dependency rules are unchanged, so ADR-0001 still holds; the ADRs describe the scope at the time they were written. |
 | [adr/ADR-0001-modular-monolith.md](adr/ADR-0001-modular-monolith.md) | Accepted |
 | [adr/ADR-0002-session-cookie-authentication.md](adr/ADR-0002-session-cookie-authentication.md) | Accepted |
 

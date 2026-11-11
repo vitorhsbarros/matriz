@@ -91,7 +91,7 @@ flowchart BT
 |---|---|
 | Routes each request to the right module's presentation layer. | — |
 | Before any protected request, asks Accounts to resolve the session from the session cookie. If there is no valid session, refuses the request with "Please log in to continue." and asks the user to log in. | NFR02, DoD02, US02 AC06, ADR-0002 |
-| On every operation that changes data while logged in, asks Accounts to check the CSRF token sent in the request header, and refuses the request if it doesn't match the session. Sign-up and log-in are exempt, because no session exists yet. | NFR02, ADR-0002 |
+| On every operation that changes data while logged in, asks Accounts to check the CSRF token sent in the request header, and refuses the request if it doesn't match the session. Log-in is exempt, because no session exists yet. | NFR02, ADR-0002 |
 | Passes the **current user's identifier** to the module, so modules don't need to handle sessions. | NFR02 |
 
 ### 3.4 Modules
@@ -100,24 +100,24 @@ flowchart BT
 
 | | |
 |---|---|
-| **Responsibility** | Sign-up, log-in and log-out, sessions, password protection, user lookup. |
+| **Responsibility** | Log-in and log-out, the current user, sessions, password protection, user lookup. Its users are the demo accounts created by the seed (FR21, PD12); sign-up is an optional extension (FR01). |
 | **Owns** | Users (name, email, protected password), sessions (stored in the shared database, ADR-0002). |
-| **Rules** | Unique email, compared case-insensitively (FR01, D03). Passwords never stored or shown in readable text (NFR04). Same message for wrong password and unknown email (US02 AC09). Sessions are server-side, identified by an unguessable identifier in a session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), and stored in the shared database, never in an instance's memory (ADR-0001, ADR-0002). Sign-up and log-in create the session and issue its CSRF token. Log-out deletes the session, so the cookie stops working immediately (US02 AC02, ADR-0002). No expiry rule yet (section 7, open point 2). |
+| **Rules** | Unique email, compared case-insensitively (FR01, D03). Passwords never stored or shown in readable text (NFR04). Same message for wrong password and unknown email (US02 AC09). Sessions are server-side, identified by an unguessable identifier in a session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), and stored in the shared database, never in an instance's memory (ADR-0001, ADR-0002). Log-in creates the session and issues its CSRF token. The current session returns the logged-in user (US02 AC10). Demo account passwords come from configuration outside the repository (SEC10). Log-out deletes the session, so the cookie stops working immediately (US02 AC02, ADR-0002). No expiry rule yet (section 7, open point 2). |
 | **Public interface** | *Resolve session* (session cookie → current user or none). *Check CSRF token* (session, token → valid or not). *Find user by email* (email → user identifier, name, email, or "not found"). *Get users* (list of identifiers → names and emails). |
 | **Depends on** | Nothing. |
-| **User stories** | US01, US02 |
+| **User stories** | US19, US02 (US01 as an optional extension) |
 
 #### Projects
 
 | | |
 |---|---|
-| **Responsibility** | Projects, project memberships and the manager role. Answers "is this user a member of this project?" for the rest of the application. |
+| **Responsibility** | Projects, project memberships, the manager role and the search of the user's projects by name. Answers "is this user a member of this project?" for the rest of the application. |
 | **Owns** | Projects (name, description, manager), memberships (project, user, role). |
 | **Rules** | The creator becomes manager and member (FR03, D07). Only the manager manages members (FR06, NFR03, US09 AC07). The manager can't be removed (D07, US09 AC06). Members are added by email (D04). Only the manager edits or deletes the project (FR04, FR05, NFR03). Deleting a project deletes its memberships and publishes *project deleted* (FR05). Non-members get "Project not found." (DoD03). |
-| **Public interface** | *Is member* (project, user → yes/no). *Get members* (project → identifiers, names, emails, roles). *Are all members* (project, list of users → yes/no). |
+| **Public interface** | *Is member* (project, user → yes/no). *Get members* (project → identifiers, names, emails, roles). *Are all members* (project, list of users → yes/no). *Get my projects* (user, optional name text → projects with the user's role, sorted by name). *Get user names* (list of user identifiers → names, through Accounts; used for the authors of comments who have left the project, D13). |
 | **Publishes** | *Member removed* (project, user), inside the transaction that removes the membership. *Project deleted* (project), inside the transaction that deletes the project. |
 | **Depends on** | Accounts (find user by email, get names). |
-| **User stories** | US03, US04, US09, US14, US15 |
+| **User stories** | US03, US04 (list and role), US09, US14, US15, US23 |
 
 #### Teams
 
@@ -135,15 +135,17 @@ flowchart BT
 
 | | |
 |---|---|
-| **Responsibility** | Tasks of a project: creation, editing, deletion, status, assignment and the project task list. |
-| **Owns** | Tasks (project, title, description, due date, status, assignee as either a user identifier or a team identifier, or none). |
-| **Rules** | Every operation checks that the current user is a project member (NFR03, DoD03). Title, description and due date validation (US05, US08, D01, D02, D12). Fixed statuses "To do", "In progress", "Done", any transition (FR13, C04). At most one assignee, a person or a team (ASM04 in constraints.md). A person assignee must be a project member (US10 AC04, AC05). A team assignee's members must all be project members, checked only when assigning (D09, US13 AC04). Any member can change any task (D08). Last saved change wins (D11). |
+| **Responsibility** | Tasks of a project: creation, details, editing, deletion, status, priority, assignees, comments, the board with its filters, and the task counts of the home dashboard. |
+| **Owns** | Tasks (project, title, description, due date, status, priority), their assignees (user identifiers and team identifiers, zero or more of each) and their comments (author identifier, text, dates). |
+| **Rules** | Every operation checks that the current user is a project member (NFR03, DoD03). Title, description and due date validation (US05, US08, D01, D02, D12). Fixed statuses "To do", "In progress", "Done", any transition (FR13, C04). Fixed priorities "Low", "Medium", "High", "Medium" by default (FR10, C04). Zero or more assignees, people and teams, each at most once (ASM04 in constraints.md). A person assignee must be a project member (US10 AC04, AC05). A team assignee's members must all be project members, checked only when assigning (D09, US13 AC04). Any member can change any task (D08). Last saved change wins (D11). Comment text 1–2000 characters; only the author edits or deletes a comment (FR23, NFR03). Filters by status and priority (FR17). |
 | **Public interface** | None used by other modules in the MVP. |
-| **Handles** | *Member removed* (project, user): unassigns that person's tasks in that project; team assignments are not affected (D10, US09 AC03, US13 AC08). *Project deleted* (project): deletes all the project's tasks (FR05, US15 AC02). *Team deleted* (team): unassigns every task assigned to the team (FR20, US18 AC02). |
-| **Depends on** | Projects (is member, get members with names, are all members), Teams (find team, get team members, get team names). |
-| **User stories** | US05, US06, US07, US08, US10, US13, US16 |
+| **Handles** | *Member removed* (project, user): removes that person from the assignees of the project's tasks; other assignees, including teams, and their comments stay (D10, D13, US09 AC03, US13 AC08). *Project deleted* (project): deletes all the project's tasks with their assignees and comments (FR05, US15 AC02). *Team deleted* (team): removes the team from the assignees of every task (FR20, US18 AC02). |
+| **Depends on** | Projects (is member, get members with names, are all members, get my projects, get user names), Teams (find team, get team members, get team names). |
+| **User stories** | US04 (task counts), US05, US06, US07, US08, US10, US13, US16, US20, US21, US22, US24 |
 
-The task list (US06) shows assignee names. People's names come from the Projects member list (which gets them from Accounts); since D10 unassigns removed members, every person assignee is a current member. Team names come from Teams.
+The board (US06) shows assignee names. People's names come from the Projects member list (which gets them from Accounts); since D10 removes people from the assignees when they leave, every person assignee is a current member. Team names come from Teams. Comment authors who have left the project (D13) get their names through *Get user names*.
+
+**Home dashboard (US04).** The dashboard needs the user's projects (Projects) and their task counts (Tasks). Because Tasks depends on Projects and not the other way round, the dashboard operation (`GET /projects`) is served by **Tasks**: it asks Projects for the user's projects (with the search text, US23), counts their tasks per status, and adds up the totals over all the user's projects (D14). This keeps the dependency rules unchanged.
 
 ## 4. Main interactions
 
@@ -164,9 +166,9 @@ sequenceDiagram
     T->>P: Is member (Website, Ana)?
     P-->>T: Yes
     Note over T: Trim text (D01), check lengths (D02),<br/>title required, due date valid and not in the past (D12)
-    T->>DB: Save task, status "To do", unassigned
+    T->>DB: Save task, status "To do", priority (default "Medium"), no assignees
     T-->>E: Task created
-    E-->>Ana: Task appears in the project's task list
+    E-->>Ana: Task appears on the project's board
     Note over T,P: If not a member: "Project not found." and nothing is saved (AC06, DoD03)
 ```
 
@@ -185,18 +187,18 @@ sequenceDiagram
     P->>DB: Begin transaction
     P->>DB: Delete membership (Website, Rui)
     P-)T: Event "member removed" (Website, Rui), same transaction
-    T->>DB: Unassign tasks in Website assigned to Rui
-    Note over T: Tasks assigned to teams are not changed (D10, AC03)
+    T->>DB: Remove Rui from the assignees of the tasks in Website
+    Note over T: Other assignees, including teams, and Rui's comments stay (D10, D13, AC03)
     T-->>P: Handled
     P->>DB: Commit
     P-->>E: Member removed
     E-->>Ana: Updated member list
-    Note over P,T: If the handler fails, the whole transaction is rolled back:<br/>Rui stays a member and his tasks stay assigned
+    Note over P,T: If the handler fails, the whole transaction is rolled back:<br/>Rui stays a member and stays assigned to his tasks
 ```
 
 Projects only publishes the event; it doesn't know that Tasks exists. This keeps the dependency direction Tasks → Projects without a cycle (ADR-0001).
 
-### 4.3 US13 — Assign a task to a team
+### 4.3 US13 — Assign a team to a task
 
 ```mermaid
 sequenceDiagram
@@ -206,7 +208,7 @@ sequenceDiagram
     participant P as Projects
     participant M as Teams
     participant DB as Database
-    Ana->>E: Assign "Create icons" to team "Design"
+    Ana->>E: Assign team "Design" to "Create icons"
     E->>T: Assign to team (task, "Design", current user Ana)
     T->>P: Is member (Website, Ana)?
     P-->>T: Yes (else "Project not found.")
@@ -216,9 +218,9 @@ sequenceDiagram
     M-->>T: Rui, Sara
     T->>P: Are all members (Website, [Rui, Sara])?
     P-->>T: Yes (else "All team members must belong to the project.")
-    T->>DB: Set assignee = team Design (replaces any previous assignee)
+    T->>DB: Add team Design to the task's assignees (the others stay)
     T-->>E: Assigned
-    E-->>Ana: Task list shows "Design (team)"
+    E-->>Ana: Board shows "Design (team)" among the assignees
     Note over T,M: Checked only now (D09). Later team changes don't undo the assignment.
 ```
 
@@ -234,30 +236,33 @@ sequenceDiagram
 | **Password protection** | NFR04 | Only Accounts handles passwords. They are stored in a protected, non-readable form and never returned through any interface. The method is chosen in the stack phase. |
 | **Visibility of changes** | NFR07 | Every instance reads and writes the same database; there are no per-instance copies of business data, so a saved change is visible on the next read. |
 | **Simultaneous changes** | D11 | No locking or conflict detection: each save overwrites the previous one, so the last saved change wins (US07 AC08). |
-| **Consistency of cross-module rules** | D09, D10, NFR03 | All cross-module calls and the "member removed" event run in-process, inside one database transaction. |
+| **Consistency of cross-module rules** | D09, D10, NFR03 | All cross-module calls and the three events run in-process, inside one database transaction. |
 | **Interface language and exact messages** | C05, DoD01, DoD04 | Each module's presentation layer owns its English messages, exactly as written in the acceptance criteria. A refused validation changes no data because it happens before the transaction writes. |
 | **Maintainability** | ADR-0001 | Four modules with public interfaces, one-way dependencies and data ownership, checked automatically (open point 3). |
 | **Scalability** (not a formal requirement, open point 4) | ADR-0001 | Horizontal: several identical instances behind a load balancer, sharing one database. This is possible because sessions are stored in the shared database, not in instance memory (ADR-0002). Per part: a module can be extracted into a service along its public interface. |
-| **Response time** (Should) | NFR06 | Not required in the MVP. When it is, the task list fetches names in batches (one call per module, not one per task) and the task data is indexed by project. |
+| **Response time** (Should) | NFR06 | Not required in the MVP. When it is, the board fetches names in batches (one call per module, not one per task), the task data is indexed by project, status and priority, and the dashboard counts are computed with one grouped query. |
 
 ### 5.2 Business rules
 
 | Rule | Source | Enforced in |
 |---|---|---|
-| Unique email, case-insensitive | FR01, D03 | Accounts |
+| Unique email, case-insensitive | FR01, FR21, D03 | Accounts |
+| Demo account passwords outside the repository | SEC10, FR21 | Seed and configuration (PD12) |
 | Creator is manager and member; manager can't be removed | FR03, FR08, D07 | Projects, Teams |
 | Only the manager manages members | FR06, FR09, NFR03 | Projects, Teams |
 | People added by email | D04 | Projects, Teams (via Accounts) |
 | Unique team names; teams visible to everyone | D06, D05 | Teams |
 | Every task operation requires project membership | NFR03, DoD03 | Tasks (via Projects) |
 | Fixed statuses, any transition | FR13, C04 | Tasks |
-| At most one assignee, a person or a team | FR14, ASM04 | Tasks |
+| Zero or more assignees, people and teams, each at most once | FR14, ASM04 | Tasks |
+| Fixed priorities, "Medium" by default | FR10, C04 | Tasks |
+| Only the author edits or deletes a comment | FR23, NFR03 | Tasks |
 | Person assignee must be a project member | US10 AC04, AC05 | Tasks (via Projects) |
 | Team assignee's members must all be project members, only when assigning | D09, US13 | Tasks (via Teams and Projects) |
-| Removing a member unassigns their tasks in that project, not team tasks | D10, US09 AC03 | Projects publishes, Tasks handles, one transaction |
-| Deleting a project deletes its memberships and tasks; teams are not affected | FR05, US15 | Projects publishes *project deleted*, Tasks handles, one transaction |
-| Deleting a team unassigns its tasks; members keep their accounts and projects | FR20, US18 | Teams publishes *team deleted*, Tasks handles, one transaction |
-| Deleting needs the user's confirmation | NFR05, US15, US16, US18 | Browser application (before calling the API) |
+| Removing a member removes them from the assignees of that project's tasks; other assignees and their comments stay | D10, D13, US09 AC03 | Projects publishes, Tasks handles, one transaction |
+| Deleting a project deletes its memberships and tasks (with their comments); teams are not affected | FR05, US15 | Projects publishes *project deleted*, Tasks handles, one transaction |
+| Deleting a team removes it from its tasks' assignees; members keep their accounts and projects | FR20, US18 | Teams publishes *team deleted*, Tasks handles, one transaction |
+| Deleting needs the user's confirmation | NFR05, US15, US16, US18, US22 | Browser application (before calling the API) |
 | Any member can change any task | D08 | Tasks |
 | Text trimming, length limits, due date not in the past | D01, D02, D12 | Business logic of each module |
 
@@ -309,7 +314,8 @@ Two deployment conditions follow from the session cookie (ADR-0002):
 |---|---|
 | Boundary erosion | Without the automated check (open point 3), modules may start using each other's internals or data. |
 | Session storage | **Resolved by [ADR-0002](adr/ADR-0002-session-cookie-authentication.md).** Server-side sessions identified by a session cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), stored in the shared database and owned by Accounts; CSRF token in a request header for data-changing operations; log-out deletes the session (US02 AC02). Expiry is still open (open point 2). |
-| Membership check and removal at the same time | US10 AC05: an assignment checks membership, and in parallel the manager removes that person. Depending on transaction isolation, the assignment could be saved just after D10 unassigned the person's tasks. The stack phase must choose an isolation or ordering that prevents this. D11 (last write wins) applies to edits of the same task, not to this case. |
+| Membership check and removal at the same time | US10 AC05: an assignment checks membership, and in parallel the manager removes that person. Depending on transaction isolation, the assignment could be saved just after D10 removed the person from the tasks' assignees. The stack phase must choose an isolation or ordering that prevents this. D11 (last write wins) applies to edits of the same task, not to this case. |
 | Module split may change | The four modules mirror the current domain; they may need adjusting as the Should features arrive. |
-| Names for the task list | The task list needs names from Projects (via Accounts) and Teams. Done naively (one call per task), this could threaten NFR06 later. |
+| Names for the board and comments | The board and the comments need names from Projects (via Accounts) and Teams. Done naively (one call per task or comment), this could threaten NFR06 later. |
+| Dashboard served by Tasks | The `GET /projects` operation is served by Tasks so the dependency rules don't change (section 3.4). If more project-level views need task data, a separate read-only component may be clearer. |
 | Data ownership in one database | The stack phase decides whether cross-module references are protected by database-level integrity constraints or only by identifiers, without letting modules read each other's data. |

@@ -1,6 +1,6 @@
 # Matriz
 
-Matriz is a project and task management application for work teams, similar to Jira but much simpler. Several people can create projects, record the work as tasks, follow each task on a board (To do, In progress, Done) and make clear who is responsible for it: one person or one team.
+Matriz is a project and task management application for work teams, similar to Jira but much simpler. Several people can create projects, record the work as tasks with a priority, follow each task on a board (To do, In progress, Done), discuss it in comments and make clear who is responsible for it: one or more people or teams.
 
 ## Problem
 
@@ -9,7 +9,7 @@ The client needs an application where its teams can organise projects, manage ta
 ## Goals
 
 1. Let a team organise its work in projects, each with its own tasks and members.
-2. Make clear who is responsible for each task: one person or one team.
+2. Make clear who is responsible for each task: one or more people or teams.
 3. Show at a glance where every task stands.
 4. Stay simple enough to use without training: no sprints, reports, integrations or configurable workflows.
 
@@ -17,10 +17,14 @@ The client needs an application where its teams can organise projects, manage ta
 
 | Area | What a user can do | User stories |
 |---|---|---|
-| **Accounts** | Sign up, log in and log out. | US01, US02 |
-| **Projects** | Create a project, see the projects they belong to, and (as manager) edit or delete it and add and remove members. | US03, US04, US09, US14, US15 |
+| **Accounts** | Log in with a demo account created by the seed, see who is logged in, and log out. | US19, US02 |
+| **Home dashboard** | See their projects with the number of tasks in each status, per project and in total, and search projects by name. | US04, US23 |
+| **Projects** | Create a project, open it, and (as manager) edit or delete it and add and remove members. | US03, US09, US14, US15 |
 | **Teams** | Create a team and (as manager) rename or delete it and add and remove its members. | US11, US12, US17, US18 |
-| **Tasks** | Create, edit and delete tasks, move them between To do, In progress and Done on the project's board, and assign them to a member or a team. | US05–US08, US10, US13, US16 |
+| **Tasks** | Create, view, edit and delete tasks with a priority, move them between To do, In progress and Done on the project's board, filter the board by status and priority, and assign several members and teams to them. | US05–US08, US10, US13, US16, US20, US24 |
+| **Comments** | Add and read a task's comments, and edit or delete their own. | US21, US22 |
+
+Public registration and password recovery are optional extensions, outside the MVP.
 
 The full MVP scope, and what is left for later, is in [docs/requirements.md](docs/requirements.md).
 
@@ -31,7 +35,7 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
 | Document | Contents |
 |---|---|
 | [docs/requirements.md](docs/requirements.md) | Vision and goals, user types, functional and non-functional requirements, MVP scope, and what is out of the initial scope. |
-| [docs/user-stories.md](docs/user-stories.md) | The 18 MVP user stories, with priorities, acceptance criteria and exceptional cases. |
+| [docs/user-stories.md](docs/user-stories.md) | The 23 MVP user stories, with priorities, acceptance criteria and exceptional cases, and the optional extensions. |
 | [docs/constraints.md](docs/constraints.md) | Known constraints, assumptions, security and privacy rules, pending technical decisions and scope limitations. |
 | [AGENTS.md](AGENTS.md) | Instructions for AI coding agents working on this repository. |
 
@@ -60,5 +64,6 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
     - the [specification review](docs/reviews/specification-review.md) covers the Specification Pack;
     - [review-01](docs/reviews/review-01.md) covers the Architecture Pack.
   - A [prompt injection test](docs/reviews/prompt-injection-challenge.md) checked that agents treat external documents as data.
+  - The MVP was then [reconciled with a new scope](docs/reviews/scope-reconciliation.md) before implementation.
 - **Implementation:** not started. The technology stack is still to be chosen (pending decision PD01 in [docs/constraints.md](docs/constraints.md)).
 - **Next step:** full-stack development of the MVP, following the user stories in their implementation order.

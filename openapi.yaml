@@ -4,11 +4,12 @@ info:
   version: 0.1.0
   summary: Project and task management API for the Matriz MVP.
   description: |
-    Specification of every operation needed by the Matriz MVP (user stories US01–US18).
+    Specification of every operation needed by the Matriz MVP (user stories US02–US24).
+    Public registration (US01) is an optional extension and is not part of this contract.
     The design decisions, the mapping to the user stories and the assumptions are
     explained in `docs/api-contract.md`.
 
-    **Authentication.** Signing up and logging in are public. Every other operation
+    **Authentication.** Logging in is public. Every other operation
     requires a logged-in user, identified by a session cookie. Operations that change
     data also require a CSRF token header, returned when the session is created.
 
@@ -46,75 +47,16 @@ security:
 
 tags:
   - name: Accounts
-    description: Sign-up, log-in and log-out (Accounts module).
+    description: Log-in, log-out and the current session (Accounts module).
   - name: Projects
     description: Projects and their members (Projects module).
   - name: Teams
     description: Teams and their members (Teams module).
   - name: Tasks
-    description: Tasks of a project (Tasks module).
+    description: Tasks of a project, their assignees and their comments (Tasks module).
 
 paths:
   # ---------------------------------------------------------------- Accounts
-  /users:
-    post:
-      tags: [Accounts]
-      operationId: signUp
-      summary: Create an account
-      description: |
-        Creates an account and logs the new user in: the response sets the session
-        cookie and returns the CSRF token (US01 AC01). User story: US01.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SignUpRequest'
-            example:
-              name: Ana Silva
-              email: ana@example.com
-              password: secure123
-      responses:
-        '201':
-          description: Account created and session started.
-          headers:
-            Set-Cookie:
-              $ref: '#/components/headers/SetSessionCookie'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Session'
-              example:
-                user:
-                  id: 0b9f3c1e-6a2d-4e8f-9c1b-2a3d4e5f6a70
-                  name: Ana Silva
-                  email: ana@example.com
-                csrfToken: 4f1c9a7e2b8d4c6a9e0f1b2c3d4e5f6a
-        '400':
-          $ref: '#/components/responses/MalformedRequest'
-        '409':
-          description: The email is already used by another account, ignoring case (US01 AC02, AC03).
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Conflict, status: 409, detail: "This email is already in use."}
-        '422':
-          description: Invalid sign-up data (US01 AC04–AC07).
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-              examples:
-                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Name is required."}}
-                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Name must be at most 100 characters."}}
-                emailRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Email is required."}}
-                emailInvalid: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Enter a valid email address."}}
-                passwordRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Password is required."}}
-                passwordTooShort: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Password must be at least 8 characters."}}
-                passwordTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Password must be at most 128 characters."}}
-
   /session:
     post:
       tags: [Accounts]
@@ -167,8 +109,8 @@ paths:
       operationId: getSession
       summary: Get the current session
       description: |
-        Returns the logged-in user and the CSRF token, so the client can restore its
-        state after a page reload. User story: US02.
+        Returns the logged-in user and the CSRF token, so the client can show who is
+        logged in and restore its state after a page reload (US02 AC10). User story: US02.
       security:
         - sessionCookie: []
       responses:
@@ -206,26 +148,44 @@ paths:
     get:
       tags: [Projects]
       operationId: listMyProjects
-      summary: List the projects I am a member of
+      summary: Get the home dashboard
       description: |
-        Returns the projects the current user is a member of, with their role, sorted
-        alphabetically by name ignoring case (US04 AC01, AC05). An empty list means the
-        user isn't a member of any project; the interface then shows "You are not a
-        member of any project yet." (US04 AC03). User story: US04.
+        Returns the projects the current user is a member of, with their role and their
+        task counts per status, sorted alphabetically by name ignoring case (US04 AC01,
+        AC05, AC07), and the totals across all of them.
+
+        - `name` narrows the list to projects whose name contains the text, ignoring
+          case and leading or trailing spaces (US23). An empty or missing `name` returns
+          every project.
+        - `totals` always covers every project the user is a member of, whatever the
+          `name` filter (D14, US23 AC05).
+
+        An empty `projects` list with no `name` means the user isn't a member of any
+        project; the interface then shows "You are not a member of any project yet."
+        (US04 AC03). An empty list with a `name` shows "No projects match your search."
+        (US23 AC02). User stories: US04, US23.
       security:
         - sessionCookie: []
+      parameters:
+        - name: name
+          in: query
+          required: false
+          description: Text to search in the project names (US23).
+          schema:
+            type: string
+          example: web
       responses:
         '200':
-          description: The user's projects.
+          description: The user's home dashboard.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ProjectSummary'
+                $ref: '#/components/schemas/ProjectDashboard'
               example:
-                - {id: 9a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d, name: App, role: MEMBER}
-                - {id: 5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10, name: Website, role: MANAGER}
+                totals: {toDo: 7, inProgress: 3, done: 12}
+                projects:
+                  - {id: 9a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d, name: App, role: MEMBER, taskCounts: {toDo: 4, inProgress: 1, done: 7}}
+                  - {id: 5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10, name: Website, role: MANAGER, taskCounts: {toDo: 3, inProgress: 2, done: 5}}
         '401':
           $ref: '#/components/responses/NotLoggedIn'
     post:
@@ -463,9 +423,9 @@ paths:
       operationId: removeProjectMember
       summary: Remove a member from the project
       description: |
-        Removes the member. In the same transaction, the tasks assigned to that person in
-        this project become unassigned; tasks assigned to teams are not affected (D10,
-        US09 AC03). The removed user loses access to the project (US09 AC02).
+        Removes the member. In the same transaction, that person is removed from the
+        assignees of every task in this project; other assignees, including teams, are not
+        affected, and their comments stay (D10, D13, US09 AC03). The removed user loses access to the project (US09 AC02).
         Only the project manager can do this, and the manager can't be removed.
         User story: US09.
       responses:
@@ -632,8 +592,8 @@ paths:
       operationId: deleteTeam
       summary: Delete a team
       description: |
-        Deletes the team and its memberships, and unassigns every task assigned to the
-        team, in one transaction (FR20, US18 AC02). The members keep their accounts and
+        Deletes the team and its memberships, and removes the team from the assignees of
+        every task, in one transaction (FR20, US18 AC02). The tasks' other assignees stay. The members keep their accounts and
         project memberships. Only the team manager can do this. The browser application
         asks the user to confirm before calling this operation (NFR05, US18 AC01, AC03).
         User story: US18.
@@ -764,12 +724,40 @@ paths:
       operationId: listProjectTasks
       summary: List the project's tasks
       description: |
-        Returns every task of the project, including done ones, from newest to oldest by
-        creation date (US06 AC01). An empty list means the project has no tasks; the
-        interface then shows "No tasks yet." (US06 AC02). Changes by other members are
-        visible as soon as they are saved (NFR07, US06 AC05). User story: US06.
+        Returns the tasks of the project, including done ones, from newest to oldest by
+        creation date (US06 AC01). Changes by other members are visible as soon as they
+        are saved (NFR07, US06 AC05).
+
+        `status` and `priority` filter the tasks (US24). Each can be repeated to accept
+        several values (e.g. `?priority=HIGH&priority=LOW`); a task must match one value of
+        each filter given. With no filters, every task is returned.
+
+        An empty list with no filters means the project has no tasks; the interface then
+        shows "No tasks yet." (US06 AC02). With filters, it shows "No tasks match the
+        filters." (US24 AC04). User stories: US06, US24.
       security:
         - sessionCookie: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Only tasks in one of these statuses (US24).
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/TaskStatus'
+        - name: priority
+          in: query
+          required: false
+          description: Only tasks with one of these priorities (US24).
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/TaskPriority'
       responses:
         '200':
           description: The project's tasks.
@@ -783,13 +771,22 @@ paths:
           $ref: '#/components/responses/NotLoggedIn'
         '404':
           $ref: '#/components/responses/ProjectNotFound'
+        '422':
+          description: A filter value isn't valid (US24 AC05).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                invalidStatus: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid status."}}
+                invalidPriority: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
     post:
       tags: [Tasks]
       operationId: createTask
       summary: Create a task in a project
       description: |
-        Creates a task in the project. The task starts in the `TO_DO` status and with no
-        assignee. User story: US05.
+        Creates a task in the project. The task starts in the `TO_DO` status, with no
+        assignees and, if no priority is given, the priority `MEDIUM`. User story: US05.
       requestBody:
         required: true
         content:
@@ -799,7 +796,7 @@ paths:
             examples:
               allFields:
                 summary: Every field (US05 AC01)
-                value: {title: Design home page, description: Follow the style guide, dueDate: '2026-11-20'}
+                value: {title: Design home page, description: Follow the style guide, dueDate: '2026-11-20', priority: HIGH}
               titleOnly:
                 summary: Only a title (US05 AC02)
                 value: {title: Review copy}
@@ -817,7 +814,8 @@ paths:
                 description: Follow the style guide
                 dueDate: '2026-11-20'
                 status: TO_DO
-                assignee: null
+                priority: HIGH
+                assignees: []
                 createdAt: '2026-11-02T10:15:30Z'
         '400':
           $ref: '#/components/responses/MalformedRequest'
@@ -834,6 +832,38 @@ paths:
     parameters:
       - $ref: '#/components/parameters/ProjectId'
       - $ref: '#/components/parameters/TaskId'
+    get:
+      tags: [Tasks]
+      operationId: getTask
+      summary: Get a task's details
+      description: |
+        Returns the task with its assignees. The comments are listed by
+        `listTaskComments`. User story: US20.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The task (US20 AC01, AC04).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: 8d3e1c52-7a5b-4f0e-bb0e-3c1c2a9e4d21
+                projectId: 5b0c6f0e-2f4a-4c47-9f39-1b2f7f6f9a10
+                title: Create logo
+                description: Use the new colours
+                dueDate: '2026-11-20'
+                status: IN_PROGRESS
+                priority: HIGH
+                assignees:
+                  - {type: team, teamId: 7a1e9b4c-2d3f-4e5a-8b6c-9d0e1f2a3b4c, name: Design}
+                  - {type: person, userId: 3f6b2d1a-9c8e-4b7a-a1d2-6e5f4c3b2a10, name: Sara Lopes}
+                createdAt: '2026-11-02T10:15:30Z'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '404':
+          $ref: '#/components/responses/ProjectOrTaskNotFound'
     patch:
       tags: [Tasks]
       operationId: updateTask
@@ -842,9 +872,10 @@ paths:
         Changes only the fields present in the body. A field set to `null` is cleared
         (only `description` and `dueDate` can be cleared). The change is all-or-nothing:
         if any field is invalid, nothing is saved (US08 AC05). Editing doesn't change the
-        assignee. Any project member can change any task (D08); the last saved change wins
+        assignees. Any project member can change any task (D08); the last saved change wins
         (D11). A due date already in the past is only checked if it is changed (D12,
-        US08 AC07). User stories: US07 (status), US08 (title, description, due date).
+        US08 AC07). User stories: US07 (status), US08 (title, description, due date,
+        priority).
       requestBody:
         required: true
         content:
@@ -857,7 +888,7 @@ paths:
                 value: {status: IN_PROGRESS}
               editFields:
                 summary: Edit every field (US08 AC01)
-                value: {title: Test the site in production, description: Test on mobile and tablet, dueDate: '2026-11-25'}
+                value: {title: Test the site in production, description: Test on mobile and tablet, dueDate: '2026-11-25', priority: HIGH}
               clearFields:
                 summary: Clear the description and due date (US08 AC02)
                 value: {description: null, dueDate: null}
@@ -878,7 +909,7 @@ paths:
           $ref: '#/components/responses/ProjectOrTaskNotFound'
         '422':
           description: |
-            Invalid data (US07 AC04, US08 AC03–AC05). Besides the messages below, the task
+            Invalid data (US07 AC04, US08 AC03–AC05, AC10). Besides the messages below, the task
             data messages of `createTask` apply (title and description length, invalid date).
           content:
             application/problem+json:
@@ -886,6 +917,7 @@ paths:
                 $ref: '#/components/schemas/Problem'
               examples:
                 invalidStatus: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid status."}}
+                invalidPriority: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
                 titleRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title is required."}}
                 dueDateInPast: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
     delete:
@@ -893,7 +925,8 @@ paths:
       operationId: deleteTask
       summary: Delete a task
       description: |
-        Deletes the task. Any project member can delete any task of the project (D08).
+        Deletes the task, with its assignees and comments (R22). Any project member can
+        delete any task of the project (D08).
         The browser application asks the user to confirm before calling this operation
         (NFR05, US16 AC01, AC03). User story: US16.
       responses:
@@ -906,17 +939,16 @@ paths:
         '404':
           $ref: '#/components/responses/ProjectOrTaskNotFound'
 
-  /projects/{projectId}/tasks/{taskId}/assignee:
+  /projects/{projectId}/tasks/{taskId}/assignees:
     parameters:
       - $ref: '#/components/parameters/ProjectId'
       - $ref: '#/components/parameters/TaskId'
-    put:
+    post:
       tags: [Tasks]
-      operationId: assignTask
-      summary: Assign a task to a person or a team
+      operationId: addTaskAssignee
+      summary: Assign a person or a team to a task
       description: |
-        Sets the task's assignee, replacing any previous one (US10 AC02, US13 AC02–AC03).
-        A task has at most one assignee: a person or a team.
+        Adds one assignee to the task. The other assignees stay (US10 AC02, US13 AC02).
 
         - A **person** must be a member of the project at the moment of assignment
           (US10 AC04–AC05).
@@ -924,24 +956,24 @@ paths:
           assignment (D09, US13 AC04). Later changes to the team don't undo the
           assignment.
 
-        Assigning the current assignee again succeeds and changes nothing (US10 AC07).
-        No other task field changes (US10 AC09). User stories: US10, US13.
+        Adding someone who is already an assignee succeeds and changes nothing (US10 AC07,
+        US13 AC09). No other task field changes (US10 AC09). User stories: US10, US13.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssignTaskRequest'
+              $ref: '#/components/schemas/AddAssigneeRequest'
             examples:
               person:
-                summary: Assign to a person (US10 AC01)
+                summary: Assign a person (US10 AC01)
                 value: {type: person, userId: 3f6b2d1a-9c8e-4b7a-a1d2-6e5f4c3b2a10}
               team:
-                summary: Assign to a team (US13 AC01)
+                summary: Assign a team (US13 AC01)
                 value: {type: team, teamId: 7a1e9b4c-2d3f-4e5a-8b6c-9d0e1f2a3b4c}
       responses:
         '200':
-          description: Task assigned. Returns the whole task.
+          description: Assignee added. Returns the whole task.
           content:
             application/json:
               schema:
@@ -953,7 +985,10 @@ paths:
                 description: null
                 dueDate: null
                 status: IN_PROGRESS
-                assignee: {type: team, teamId: 7a1e9b4c-2d3f-4e5a-8b6c-9d0e1f2a3b4c, name: Design}
+                priority: MEDIUM
+                assignees:
+                  - {type: person, userId: 0b9f3c1e-6a2d-4e8f-9c1b-2a3d4e5f6a70, name: Ana Silva}
+                  - {type: team, teamId: 7a1e9b4c-2d3f-4e5a-8b6c-9d0e1f2a3b4c, name: Design}
                 createdAt: '2026-11-02T10:15:30Z'
         '400':
           $ref: '#/components/responses/MalformedRequest'
@@ -964,7 +999,7 @@ paths:
         '404':
           $ref: '#/components/responses/ProjectOrTaskNotFound'
         '422':
-          description: The assignee can't be assigned this task. The assignee is unchanged.
+          description: The person or team can't be assigned this task. The assignees are unchanged.
           content:
             application/problem+json:
               schema:
@@ -979,16 +1014,23 @@ paths:
                 teamNotFound:
                   summary: The team doesn't exist (US13 AC05)
                   value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team not found."}
+
+  /projects/{projectId}/tasks/{taskId}/assignees/users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/UserId'
     delete:
       tags: [Tasks]
-      operationId: unassignTask
-      summary: Undo the task's assignment
+      operationId: removeTaskUserAssignee
+      summary: Remove a person from the task's assignees
       description: |
-        Removes the assignee, whether a person or a team. Undoing the assignment of an
-        unassigned task succeeds and changes nothing (US10 AC08). User stories: US10, US13.
+        Removes the person from the task's assignees. The other assignees stay (US10 AC03,
+        AC10). Removing someone who isn't an assignee succeeds and changes nothing
+        (US10 AC08). User story: US10.
       responses:
         '200':
-          description: Task unassigned (US10 AC03). Returns the whole task, with `assignee` set to `null`.
+          description: Person removed. Returns the whole task.
           content:
             application/json:
               schema:
@@ -1000,6 +1042,158 @@ paths:
         '404':
           $ref: '#/components/responses/ProjectOrTaskNotFound'
 
+  /projects/{projectId}/tasks/{taskId}/assignees/teams/{teamId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/TeamId'
+    delete:
+      tags: [Tasks]
+      operationId: removeTaskTeamAssignee
+      summary: Remove a team from the task's assignees
+      description: |
+        Removes the team from the task's assignees. The other assignees stay (US13 AC03).
+        Removing a team that isn't an assignee succeeds and changes nothing.
+        User story: US13.
+      responses:
+        '200':
+          description: Team removed. Returns the whole task.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '404':
+          $ref: '#/components/responses/ProjectOrTaskNotFound'
+
+  /projects/{projectId}/tasks/{taskId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+    get:
+      tags: [Tasks]
+      operationId: listTaskComments
+      summary: List a task's comments
+      description: |
+        Returns the task's comments from oldest to newest, with their author and dates
+        (US21 AC02). An empty list shows "No comments yet." (US21 AC07). Comments of
+        authors removed from the project stay (D13, US21 AC06). User story: US21.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The task's comments.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+              example:
+                - id: 2c4e6a8b-0d1f-4a3c-9e5b-7d9f1b3d5f70
+                  author: {userId: 0b9f3c1e-6a2d-4e8f-9c1b-2a3d4e5f6a70, name: Ana Silva}
+                  text: First draft is ready
+                  createdAt: '2026-11-10T14:30:00Z'
+                  editedAt: null
+                - id: 6e8a0c2e-4f6b-4d8a-8c0e-2a4c6e8a0c20
+                  author: {userId: 3f6b2d1a-9c8e-4b7a-a1d2-6e5f4c3b2a10, name: Rui Costa}
+                  text: Looks good
+                  createdAt: '2026-11-10T15:02:00Z'
+                  editedAt: null
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '404':
+          $ref: '#/components/responses/ProjectOrTaskNotFound'
+    post:
+      tags: [Tasks]
+      operationId: addTaskComment
+      summary: Comment on a task
+      description: |
+        Adds a comment by the current user. Any project member can comment on any task of
+        the project. User story: US21.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+            example: {text: First draft is ready}
+      responses:
+        '201':
+          description: Comment added (US21 AC01).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/InvalidCsrfToken'
+        '404':
+          $ref: '#/components/responses/ProjectOrTaskNotFound'
+        '422':
+          $ref: '#/components/responses/InvalidCommentText'
+
+  /projects/{projectId}/tasks/{taskId}/comments/{commentId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/TaskId'
+      - $ref: '#/components/parameters/CommentId'
+    patch:
+      tags: [Tasks]
+      operationId: editTaskComment
+      summary: Edit my comment
+      description: |
+        Changes the comment's text and sets `editedAt`, so the interface shows "(edited)"
+        (US22 AC01). Only the author can do this (NFR03, US22 AC05). Saving the same text
+        succeeds and changes nothing (US22 AC08). User story: US22.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+            example: {text: "Looks good, but the icon is too small"}
+      responses:
+        '200':
+          description: Comment edited. Returns the whole comment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/MalformedRequest'
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/NotCommentAuthor'
+        '404':
+          $ref: '#/components/responses/CommentNotFound'
+        '422':
+          $ref: '#/components/responses/InvalidCommentText'
+    delete:
+      tags: [Tasks]
+      operationId: deleteTaskComment
+      summary: Delete my comment
+      description: |
+        Deletes the comment. Only the author can do this, not even the project manager
+        (NFR03, US22 AC05). The browser application asks the author to confirm before
+        calling this operation (NFR05, US22 AC02, AC04). User story: US22.
+      responses:
+        '204':
+          description: Comment deleted (US22 AC03).
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '403':
+          $ref: '#/components/responses/NotCommentAuthor'
+        '404':
+          $ref: '#/components/responses/CommentNotFound'
+
 components:
   securitySchemes:
     sessionCookie:
@@ -1007,7 +1201,7 @@ components:
       in: cookie
       name: MATRIZ_SESSION
       description: |
-        Session cookie set at sign-up and log-in. It is `HttpOnly`, `Secure` and
+        Session cookie set at log-in. It is `HttpOnly`, `Secure` and
         `SameSite=Lax`. The session is stored on the server, in the shared database, so
         log-out invalidates it immediately and any instance can serve the request.
     csrfToken:
@@ -1016,7 +1210,7 @@ components:
       name: X-CSRF-Token
       description: |
         CSRF token, required on every operation that changes data once logged in. It is
-        returned in the `Session` body at sign-up, log-in and `GET /session`, and must
+        returned in the `Session` body at log-in and `GET /session`, and must
         match the session.
 
   headers:
@@ -1058,6 +1252,13 @@ components:
       in: path
       required: true
       description: Identifier of the user.
+      schema:
+        $ref: '#/components/schemas/Identifier'
+    CommentId:
+      name: commentId
+      in: path
+      required: true
+      description: Identifier of the comment.
       schema:
         $ref: '#/components/schemas/Identifier'
 
@@ -1108,10 +1309,39 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           example: {type: about:blank, title: Not Found, status: 404, detail: "Team not found."}
+    CommentNotFound:
+      description: The project isn't accessible (NFR03, DoD03), or the task or the comment doesn't exist in it.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            projectNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Project not found."}}
+            taskNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Task not found."}}
+            commentNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Comment not found."}}
+    NotCommentAuthor:
+      description: The CSRF token is invalid, or the user isn't the comment's author (US22 AC05).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            notAuthor: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the author can change this comment."}}
+            invalidCsrf: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+    InvalidCommentText:
+      description: The comment text is invalid (US21 AC03, AC05, US22 AC06).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            textRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Comment is required."}}
+            textTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Comment must be at most 2000 characters."}}
     InvalidTaskData:
       description: |
-        The task data is invalid (US05 AC03–AC05, AC08). Validations are checked in the
-        order title, description, due date, and the first one that fails is reported.
+        The task data is invalid (US05 AC03–AC05, AC08, AC10). Validations are checked in
+        the order title, description, due date, priority, and the first one that fails is
+        reported.
       content:
         application/problem+json:
           schema:
@@ -1122,6 +1352,7 @@ components:
             descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 5000 characters."}}
             dueDateInPast: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
             dueDateInvalid: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Enter a valid date."}}
+            invalidPriority: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
 
   schemas:
     Identifier:
@@ -1140,29 +1371,27 @@ components:
       enum: [TO_DO, IN_PROGRESS, DONE]
       description: Status of a task (FR13). The interface shows "To do", "In progress" and "Done".
 
-    # Accounts
-    SignUpRequest:
-      type: object
-      additionalProperties: false
-      required: [name, email, password]
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-          description: 1–100 characters after trimming.
-        email:
-          type: string
-          format: email
-          maxLength: 254
-          description: Unique, ignoring case. Stored in lowercase after trimming.
-        password:
-          type: string
-          minLength: 8
-          maxLength: 128
-          writeOnly: true
-          description: 8–128 characters. Not trimmed. Never stored or returned in readable form (NFR04).
+    TaskPriority:
+      type: string
+      enum: [LOW, MEDIUM, HIGH]
+      description: Priority of a task (FR10). The interface shows "Low", "Medium" and "High".
 
+    TaskCounts:
+      type: object
+      required: [toDo, inProgress, done]
+      description: Number of tasks in each status (FR07). Plain counts, not statistics (C02).
+      properties:
+        toDo:
+          type: integer
+          minimum: 0
+        inProgress:
+          type: integer
+          minimum: 0
+        done:
+          type: integer
+          minimum: 0
+
+    # Accounts
     LogInRequest:
       type: object
       additionalProperties: false
@@ -1244,7 +1473,7 @@ components:
 
     ProjectSummary:
       type: object
-      required: [id, name, role]
+      required: [id, name, role, taskCounts]
       properties:
         id:
           $ref: '#/components/schemas/Identifier'
@@ -1253,6 +1482,21 @@ components:
         role:
           $ref: '#/components/schemas/Role'
           description: The current user's role in the project.
+        taskCounts:
+          $ref: '#/components/schemas/TaskCounts'
+
+    ProjectDashboard:
+      type: object
+      required: [totals, projects]
+      properties:
+        totals:
+          $ref: '#/components/schemas/TaskCounts'
+          description: Counts added up across every project the user is a member of, whatever the search (D14).
+        projects:
+          type: array
+          description: The user's projects that match the search, sorted by name ignoring case.
+          items:
+            $ref: '#/components/schemas/ProjectSummary'
 
     AddMemberRequest:
       type: object
@@ -1345,6 +1589,9 @@ components:
           type: [string, 'null']
           format: date
           description: Optional. A valid calendar date, not earlier than the current day (D12).
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+          description: Optional. `MEDIUM` if not given.
 
     UpdateTaskRequest:
       type: object
@@ -1365,9 +1612,11 @@ components:
           description: If changed, not earlier than the current day (D12).
         status:
           $ref: '#/components/schemas/TaskStatus'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
 
-    AssignTaskRequest:
-      description: The new assignee, either a person or a team.
+    AddAssigneeRequest:
+      description: The assignee to add, either a person or a team.
       oneOf:
         - $ref: '#/components/schemas/AssignToPerson'
         - $ref: '#/components/schemas/AssignToTeam'
@@ -1401,7 +1650,7 @@ components:
 
     Task:
       type: object
-      required: [id, projectId, title, description, dueDate, status, assignee, createdAt]
+      required: [id, projectId, title, description, dueDate, status, priority, assignees, createdAt]
       properties:
         id:
           $ref: '#/components/schemas/Identifier'
@@ -1416,12 +1665,17 @@ components:
           format: date
         status:
           $ref: '#/components/schemas/TaskStatus'
-        assignee:
-          description: Who is responsible for the task, or `null` if unassigned.
-          oneOf:
-            - $ref: '#/components/schemas/PersonAssignee'
-            - $ref: '#/components/schemas/TeamAssignee'
-            - type: 'null'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        assignees:
+          type: array
+          description: |
+            Who is responsible for the task: people and teams, each at most once. An empty
+            list means the task is unassigned ("Unassigned").
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/PersonAssignee'
+              - $ref: '#/components/schemas/TeamAssignee'
         createdAt:
           type: string
           format: date-time
@@ -1452,6 +1706,42 @@ components:
         name:
           type: string
           description: The team's name. The task list shows it followed by "(team)".
+
+    CommentRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: 1–2000 characters after trimming.
+
+    Comment:
+      type: object
+      required: [id, author, text, createdAt, editedAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Identifier'
+        author:
+          type: object
+          required: [userId, name]
+          properties:
+            userId:
+              $ref: '#/components/schemas/Identifier'
+            name:
+              type: string
+        text:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+          description: When the comment was added. Shown next to the author (US21 AC01).
+        editedAt:
+          type: [string, 'null']
+          format: date-time
+          description: When the author last edited the comment, or `null`. When set, the interface shows "(edited)" (US22 AC01).
 
     Problem:
       type: object
