@@ -87,11 +87,13 @@ class TasksController {
     }
 
     private final JdbcTasks tasks;
+    private final TaskAssignees assignees;
     private final ProjectAccess access;
     private final Clock clock;
 
-    TasksController(JdbcTasks tasks, ProjectAccess access, Clock clock) {
+    TasksController(JdbcTasks tasks, TaskAssignees assignees, ProjectAccess access, Clock clock) {
         this.tasks = tasks;
+        this.assignees = assignees;
         this.access = access;
         this.clock = clock;
     }
@@ -104,7 +106,7 @@ class TasksController {
         List<String> statuses = status == null ? List.of() : status.stream().map(TaskFields::status).toList();
         List<String> priorities = priority == null ? List.of()
                 : priority.stream().map(TaskFields::priority).toList();
-        return tasks.list(project, statuses, priorities);
+        return assignees.attach(tasks.list(project, statuses, priorities));
     }
 
     /** US05: fields checked in the order title, description, due date, priority (AS08). */
@@ -119,14 +121,14 @@ class TasksController {
 
         UUID id = tasks.create(project, title, description, dueDate, priority);
         return ResponseEntity.created(URI.create("/api/projects/" + project + "/tasks/" + id))
-                .body(tasks.find(project, id).orElseThrow());
+                .body(assignees.attach(tasks.find(project, id).orElseThrow()));
     }
 
     /** US20. */
     @GetMapping("/{taskId}")
     TaskView get(@PathVariable String projectId, @PathVariable String taskId, Authentication authentication) {
         UUID project = memberProject(projectId, authentication);
-        return tasks.find(project, taskId(taskId)).orElseThrow(TasksController::taskNotFound);
+        return assignees.attach(tasks.find(project, taskId(taskId)).orElseThrow(TasksController::taskNotFound));
     }
 
     /**
@@ -150,7 +152,7 @@ class TasksController {
         if (!tasks.update(project, task, fields)) {
             throw taskNotFound();   // deleted by another member in the meantime
         }
-        return tasks.find(project, task).orElseThrow(TasksController::taskNotFound);
+        return assignees.attach(tasks.find(project, task).orElseThrow(TasksController::taskNotFound));
     }
 
     /** US16: any member may delete any task (D08). */
@@ -164,7 +166,7 @@ class TasksController {
     }
 
     /** The project in the URL, once the logged-in user is known to be one of its members (DoD03). */
-    private UUID memberProject(String projectId, Authentication authentication) {
+    UUID memberProject(String projectId, Authentication authentication) {
         UUID project;
         try {
             project = UUID.fromString(projectId);
@@ -175,7 +177,7 @@ class TasksController {
         return project;
     }
 
-    private static UUID taskId(String value) {
+    static UUID taskId(String value) {
         try {
             return UUID.fromString(value);
         } catch (IllegalArgumentException notAnIdentifier) {
@@ -187,7 +189,7 @@ class TasksController {
         return LocalDate.now(clock);   // AS11: the server's current date
     }
 
-    private static ErrorResponseException taskNotFound() {
+    static ErrorResponseException taskNotFound() {
         return new ErrorResponseException(HttpStatus.NOT_FOUND,
                 ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, TASK_NOT_FOUND), null);
     }

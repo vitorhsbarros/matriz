@@ -69,8 +69,9 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
   - I0: the application and its persistence are set up;
   - I1: log-in, the current user and log-out with the demo accounts (US19, US02), and the project access check that the next increments use;
   - I2: project management, the first complete path from the screen to the database: the home dashboard with task counts and search, and creating, opening, editing and deleting projects (US03, US04, US23, US14, US15);
-  - I3: the work of each project: the task board, and creating, moving, editing, viewing, deleting and filtering tasks (US05, US06, US07, US08, US20, US16, US24).
-- **Next step:** increment I4, project members and assigning people to tasks (US09, US10).
+  - I3: the work of each project: the task board, and creating, moving, editing, viewing, deleting and filtering tasks (US05, US06, US07, US08, US20, US16, US24);
+  - I4 to I6, back end only: project members, teams, assigning people and teams to tasks, and comments (US09–US13, US17, US18, US21, US22).
+- **Next step:** the browser application for I4 to I6 (members and teams screens, assignees and comments on the task details).
 
 ## Running the application
 
@@ -110,7 +111,8 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
   - filter the board by status and priority, and **Clear filters**;
   - open a task for its details (`#/projects/<id>/tasks/<id>`), **Edit** it, or **Delete task** after confirming (also on each card).
   - The board and its counts update at once, without reloading; the home dashboard shows the new counts when it is opened again.
-  - Assignees and comments arrive in I4–I6; until then every task is *Unassigned*.
+  - Assignees and comments are in the API (below) but not on the screens yet, so the board and the details still show *Unassigned*.
+- **Through the API only, for now** (operations in [openapi.yaml](openapi.yaml)): manage a project's members (manager), create and manage teams (any user creates; the team manager changes it), assign people and teams to tasks (any member), and comment on tasks (only the author edits or deletes a comment).
 - **As the manager:** **Edit** the name and description, and **Delete project** after confirming. Deleting also deletes the project's tasks and comments.
 - Members see the project but not Edit or Delete; anyone else gets "Project not found.".
 - Projects are stored in PostgreSQL, so they are still there after restarting the application.

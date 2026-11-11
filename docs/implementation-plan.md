@@ -1,6 +1,6 @@
 # Matriz — Implementation plan (MVP)
 
-- **Status:** in progress. I0 to I3 are done (2026-11-11); I4 is next. The increments and their status are in section 5; update the **Status** column as the work progresses.
+- **Status:** in progress. I0 to I3 are done, and the back end of I4 to I6 (2026-11-11); the browser application of I4 to I6 is next. The increments and their status are in section 5; update the **Status** column as the work progresses.
 - **Scope:** the 23 MVP user stories in [user-stories.md](user-stories.md), after the [scope reconciliation](reviews/scope-reconciliation.md).
 - **Prompt:** [docs/prompts/implementation-plan.md](prompts/implementation-plan.md).
 
@@ -39,13 +39,13 @@ Every decision in this plan is marked **Confirmed** (with its source) or **Propo
 | PD02 | Session expiry — **Decided 2026-11-11: (b), 30 minutes without requests** | **I1.** Spring Session expires a session after 30 minutes without use by default, so "sessions last until log-out" (ADR-0002) no longer holds once log-in exists. Decide before I1. | (a) No expiry, as today: simplest; abandoned sessions pile up. (b) Fixed idle timeout (e.g. 8 h): one attribute and a clean-up job. (c) Absolute lifetime: same cost, logs out active users. |
 | PD03 | Tool for checking module boundaries — **Decided 2026-11-11: Spring Modulith** | Project set-up | (a) Architecture tests in the test suite (e.g. ArchUnit): plain tests, explicit rules. (b) A module framework (e.g. Spring Modulith): checks plus event support, more framework to learn. (c) Package conventions only: no tool, relies on discipline (ADR-0001 asks for an automated check). |
 | PD04 | Foreign keys between modules' data — **Decided 2026-11-11: foreign keys with `ON DELETE RESTRICT`** | Project set-up (schema) | (a) Foreign keys: the database protects integrity; deletes must follow module order. (b) Identifiers only: modules fully independent; integrity relies on the events (R12, R17, R19). |
-| PD05 | Assign and remove a member at the same time | Assigning people (US10) | (a) Lock the membership row while assigning: simple, short waits. (b) Serializable transactions for these two operations: correct, retries needed. (c) Accept the rare race for the demo, documented as a known risk. |
+| PD05 | Assign and remove a member at the same time — **Decided 2026-11-11: (a), lock the membership row** | Assigning people (US10) | (a) Lock the membership row while assigning: simple, short waits. (b) Serializable transactions for these two operations: correct, retries needed. (c) Accept the rare race for the demo, documented as a known risk. |
 | PD06 | Password hashing — **Decided 2026-11-11: BCrypt** | Log-in (US02, US19) | (a) BCrypt: the framework default, well known. (b) Argon2: stronger, needs an extra library. Both meet NFR04. |
 | PD07 | Deleting an account | Not in the MVP | Deferred (constraints.md). |
 | PD08 | Scalability as a requirement | Not in the MVP | Deferred. |
 | PD09 | Review-01 F05 wording | Nothing | Wording only; decide when convenient. |
 | PD10 | Repeated log-in attempts | Not in the MVP | (a) None in the MVP: demo with seed accounts. (b) Temporary block per email after N failures: small, but must not reveal whether the email exists (SEC04). |
-| PD11 | Who can see teams | Teams (US11–US13) | (a) Everyone (D05, as today): simplest. (b) Only users sharing a project with the team's members: more private, more queries. |
+| PD11 | Who can see teams — **Decided 2026-11-11: (a), everyone (D05)** | Teams (US11–US13) | (a) Everyone (D05, as today): simplest. (b) Only users sharing a project with the team's members: more private, more queries. |
 | PD12 | Demo accounts — **Decided 2026-11-11:** 3 accounts and 2 projects, seed at start-up | Log-in (US02, US19) | See G04. In the deployment, the seed runs at start-up (e.g. a Flyway migration or a start-up task) and reads the passwords from the platform's secrets. |
 | PD13 | **Deployment platform** (new) | The deployment, planned later | (a) A platform that runs a container and offers managed PostgreSQL (e.g. Render, Railway, Fly.io): least set-up, HTTPS included, free tiers may sleep or expire. (b) A virtual machine with Docker Compose: full control, but HTTPS, updates and backups are the developer's job. (c) A university or company server, if one is available: depends on what it offers. |
 
@@ -140,7 +140,7 @@ The matrix consolidates who can do what. **Confirmed** cells give their source; 
 
 | Action | Visitor | User | Member (team) | Manager (team) | Source |
 |---|---|---|---|---|---|
-| See all teams and their members' names | No | Yes | Yes | Yes | Confirmed: D05, PRI04. PD11 still open. |
+| See all teams and their members' names | No | Yes | Yes | Yes | Confirmed: D05, PRI04, PD11 (decided 2026-11-11). |
 | Create a team (becomes its manager) | No | Yes | Yes | Yes | Confirmed: FR08, D07 |
 | Rename, delete (after confirming), add or remove members | No | No: "Only the team manager can …" | No | Yes; can't remove themself | Confirmed: FR09, FR19, FR20, NFR03, NFR05, D07 |
 
@@ -176,9 +176,9 @@ Seven increments, in about 15 working days (ASM08). Each one ends with a working
 | I1 | Access: demo accounts, log-in and log-out | US19, US02 | I0 | 1.5 | Done |
 | I2 | Project management: create, home dashboard, search, edit, delete | US03, US04, US23, US14, US15 | I1 | 3 | Done |
 | I3 | Tasks: board, create, status, edit, details, delete, filters | US05, US06, US07, US08, US20, US16, US24 | I2 | 3.5 | Done |
-| I4 | Project members and assigning people | US09, US10 | I3 | 2 | Not started |
-| I5 | Teams and assigning teams | US11, US12, US13, US17, US18 | I4 | 2.5 | Not started |
-| I6 | Comments | US21, US22 | I3 | 1.5 | Not started |
+| I4 | Project members and assigning people | US09, US10 | I3 | 2 | Back end done |
+| I5 | Teams and assigning teams | US11, US12, US13, US17, US18 | I4 | 2.5 | Back end done |
+| I6 | Comments | US21, US22 | I3 | 1.5 | Back end done |
 | | **Total** | **23 stories** | | **15** | |
 
 **Order changed on 2026-11-11** (user's decision, [docs/prompts/project-management.md](prompts/project-management.md)): the whole project management comes first, as the first complete path between the interface, the API and the database. US14 and US15 moved from the old I6, US23 from the old I8, and US05 and US06 moved from I2 to I3. The later increments were renumbered (old I3–I5 are now I4–I6). The total stays 15 days.
@@ -340,6 +340,23 @@ Seven increments, in about 15 working days (ASM08). Each one ends with a working
 | **Checks** | API tests per AC; the manager gets "Only the author can change this comment." (US22 AC05); a removed member's comment keeps the name (US21 AC06). |
 
 **I4 is listed before I6, but I6 needs only I3 and *Get user names*.** If I6 is done before I4, *Get user names* is built in I6 instead.
+
+### Back end of I4, I5 and I6 — done on 2026-11-11
+
+Done together, at the user's request, without the browser application, which comes next. No prompt was saved: the user asked for the work directly.
+
+| Item | Result |
+|---|---|
+| Members (I4, US09) | `MembersController` and `JdbcProjectMembers` in Projects: list (any member, with names, emails and roles), add by email (manager only; "This user could not be added." whatever the reason, SEC09), remove (manager only; the manager can't be removed). Removing deletes the membership and publishes `MemberRemoved`, and Tasks removes the person from the project's tasks in the same transaction (D10). New public interface `ProjectMembers` for Tasks: *Get members*, *Is member* / *Are all members* with a lock (PD05) and *Get user names* (D13), all through `AccountDirectory.findByIds`. |
+| Assignees (I4, I5; US10, US13) | `AssigneesController` and `TaskAssignees` in Tasks: assign a person or a team, remove them, and `listEligibleAssignees`. A person must be a project member and a team must have all its members in the project, checked when assigning (D09) with the membership rows locked (PD05). The task operations now return the real `assignees`, sorted by the name shown (AS21). |
+| Teams (I5; US11, US12, US17, US18) | `TeamsController` and `JdbcTeams` in Teams: list (everyone, PD11), create, rename, delete, add and remove members, manager-only where the stories say so (AS23). Names are unique ignoring case and spaces, also when two requests arrive together (unique index). Deleting publishes `TeamDeleted` first, and Tasks removes the team from every task (R19). New public interface `TeamDirectory` for Tasks. |
+| Comments (I6; US21, US22) | `CommentsController` in Tasks: list oldest first, add, edit and delete. Only the author edits or deletes, not even the manager (SEC11); an edit sets `editedAt` unless the text is the same (US22 AC08); a comment keeps its author's name after the author leaves (D13). |
+| Decisions | PD05 (lock the membership row) and PD11 (everyone sees teams), both decided by the user; recorded in constraints.md, architecture.md, 04-solution-architecture.md and database.md (OP3). New assumptions AS21–AS23 in api-contract.md. |
+| Checks | `./mvnw verify`: 170 back-end tests (`MembersApiTest` 14, `TeamsApiTest` 14, `AssigneesApiTest` 13, `CommentsApiTest` 13, and the earlier 116) pass, with `ModularityTest`. The PD05 test was checked to fail when the lock is removed. |
+
+**Left for later:**
+- **The browser application** of I4 to I6: the members and teams screens, the assignees and the comments on the task details. Until then the board and the details still show "Unassigned", although the API returns the real assignees.
+- No manual check in the browser, because there is no interface for these operations yet.
 
 ## 6. Operations per increment
 

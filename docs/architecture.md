@@ -74,7 +74,7 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
   - session expiry (PD02, decided 2026-11-11: 30 minutes without requests);
   - the tool for checking module boundaries (PD03);
   - how references between modules' data are protected (PD04);
-  - concurrent assignment and removal (PD05).
+  - concurrent assignment and removal (PD05, decided 2026-11-11: lock the membership row).
 
 ## 5. Technology stack
 
@@ -104,7 +104,7 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
 **Not decided here:** these stay pending, with options in [implementation-plan.md, section 1.3](implementation-plan.md#13-pending-technical-decisions):
 - the module-boundary check (PD03);
 - foreign keys between modules (PD04);
-- the concurrency rule (PD05);
+- the concurrency rule (PD05, decided 2026-11-11 with I4);
 - the password hashing method (PD06);
 - the demo account seed (PD12);
 - the deployment platform (PD13).

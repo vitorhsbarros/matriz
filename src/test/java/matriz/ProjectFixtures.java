@@ -68,6 +68,45 @@ final class ProjectFixtures {
         }
     }
 
+    /** Adds a member through the API (US09), as the project's manager. */
+    void addMember(LoggedIn manager, UUID projectId, String email) {
+        expect(201, api.send("POST", "/api/projects/" + projectId + "/members",
+                ApiClient.json(Map.of("email", email)), manager.cookie(), manager.csrfToken()));
+    }
+
+    /** Creates a team through the API (US11) and returns its identifier. */
+    UUID createTeam(LoggedIn user, String name) {
+        Response created = expect(201, api.send("POST", "/api/teams", ApiClient.json(Map.of("name", name)),
+                user.cookie(), user.csrfToken()));
+        return UUID.fromString(created.json().get("id").asString());
+    }
+
+    /** Adds a team member through the API (US12), as the team's manager. */
+    void addTeamMember(LoggedIn manager, UUID teamId, String email) {
+        expect(201, api.send("POST", "/api/teams/" + teamId + "/members", ApiClient.json(Map.of("email", email)),
+                manager.cookie(), manager.csrfToken()));
+    }
+
+    /** Assigns a person ({@code "person"}) or a team ({@code "team"}) through the API (US10, US13). */
+    Response assign(LoggedIn member, UUID projectId, UUID taskId, String type, UUID id) {
+        String key = "person".equals(type) ? "userId" : "teamId";
+        return api.send("POST", "/api/projects/" + projectId + "/tasks/" + taskId + "/assignees",
+                ApiClient.json(Map.of("type", type, key, id.toString())), member.cookie(), member.csrfToken());
+    }
+
+    /** The logged-in user's identifier. */
+    UUID idOf(LoggedIn user) {
+        return UUID.fromString(api.send("GET", "/api/session", null, user.cookie(), null)
+                .json().get("user").get("id").asString());
+    }
+
+    private static Response expect(int status, Response response) {
+        if (response.status() != status) {
+            throw new IllegalStateException("Expected " + status + ", got " + response.status() + " " + response.body());
+        }
+        return response;
+    }
+
     void assignUser(UUID taskId, UUID userId) {
         jdbc.sql("insert into task_assignee_user (task_id, user_id) values (?, ?)").params(taskId, userId).update();
     }

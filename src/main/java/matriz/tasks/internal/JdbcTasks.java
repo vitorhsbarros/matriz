@@ -1,10 +1,10 @@
 package matriz.tasks.internal;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,9 +15,18 @@ import org.springframework.stereotype.Component;
 @Component
 class JdbcTasks {
 
-    /** A task as the API returns it. Assignees arrive with US10 and US13; until then the list is empty. */
+    /** A task as the API returns it. {@link TaskAssignees} fills in the assignees (US06, US10, US13). */
     record TaskView(UUID id, UUID projectId, String title, String description, LocalDate dueDate, String status,
-            String priority, List<Object> assignees, OffsetDateTime createdAt) {
+            String priority, List<AssigneeView> assignees, OffsetDateTime createdAt) {
+
+        TaskView withAssignees(List<AssigneeView> list) {
+            return new TaskView(id, projectId, title, description, dueDate, status, priority, list, createdAt);
+        }
+    }
+
+    /** A person ({@code userId}) or a team ({@code teamId}) responsible for a task, with the name shown. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record AssigneeView(String type, UUID userId, UUID teamId, String name) {
     }
 
     record Fields(String title, String description, LocalDate dueDate, String status, String priority) {
@@ -94,7 +103,7 @@ class JdbcTasks {
     private static TaskView view(ResultSet row) throws SQLException {
         return new TaskView(row.getObject("id", UUID.class), row.getObject("project_id", UUID.class),
                 row.getString("title"), row.getString("description"), row.getObject("due_date", LocalDate.class),
-                row.getString("status"), row.getString("priority"), new ArrayList<>(),
+                row.getString("status"), row.getString("priority"), List.of(),
                 row.getObject("created_at", OffsetDateTime.class));
     }
 }
