@@ -61,7 +61,7 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
 | [architecture/04-solution-architecture.md](architecture/04-solution-architecture.md) | Containers, modules and their responsibilities, dependency rules, key sequences (US05, US09, US13), quality attributes, deployment view, risks and open points. |
 | [architecture/adr/](architecture/adr/) | Architecture decision records: ADR-0001 (modular monolith) and ADR-0002 (session cookie authentication). |
 | [database.md](database.md) | Logical data model and ER diagram. |
-| [../openapi.yaml](../openapi.yaml) and [api-contract.md](api-contract.md) | API specification (29 operations) and the reasoning behind it. |
+| [../openapi.yaml](../openapi.yaml) and [api-contract.md](api-contract.md) | API specification (30 operations) and the reasoning behind it. |
 | [ui/](ui/README.md) | Low-fidelity wireframe of the home dashboard, the project board and the task details. |
 
 ## 4. Assumptions and pending decisions
@@ -75,3 +75,38 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
   - the tool for checking module boundaries (PD03);
   - how references between modules' data are protected (PD04);
   - concurrent assignment and removal (PD05).
+
+## 5. Technology stack
+
+**Status: Confirmed by the user on 2026-11-11 (PD01).** No stack was recorded in Lab 02, so a simple one was proposed, following the user's instruction to select one when the decision is pending. The user then asked for a server database, because the application will be deployed, and for a React single-page application.
+
+| Part | Proposal | Why |
+|---|---|---|
+| **Language** | Java 21 (LTS) | The developer's experience (ASM07). |
+| **Application framework** | Spring Boot 3, one application (ADR-0001): Spring Web for the JSON API in `openapi.yaml`, Spring Security for the session cookie and the CSRF header (ADR-0002), Spring Session JDBC to keep sessions in the shared database (ADR-0002), Spring Data JPA for data access. | Covers ADR-0001 and ADR-0002 with standard, well-known parts; the developer already knows them (ASM07). |
+| **Database** | PostgreSQL, one database for the whole application (ADR-0001), the same product in development, tests and deployment. Schema managed with Flyway migrations, one folder per module. Locally it runs in a container (Docker Compose); the tests use Testcontainers. | The application will be deployed, so the database must be a server database that keeps its data between restarts and runs the same way everywhere. PostgreSQL is free, widely hosted and well supported by Spring Boot and Flyway. |
+| **Browser application** | A single-page application in React with TypeScript, built with Vite. The build output is copied into the Spring Boot JAR (e.g. with the `frontend-maven-plugin`) and served by the same application. In development, the Vite server forwards `/api` to Spring Boot. | It is the client the API was designed for (AS01 in api-contract.md). Served from the same site as the API, which `SameSite=Lax` needs (ADR-0002, ASM11), and still one deployable (ADR-0001). React has ready-made parts for the board's drag and drop (US07) and for forms; TypeScript keeps the client's types in line with `openapi.yaml`. |
+| **Build and tests** | Maven (with the wrapper) builds the whole application, including the browser application. JUnit 5 and Spring Boot Test with MockMvc for the API, one test per acceptance criterion where possible, against PostgreSQL in Testcontainers. Vitest and Testing Library for the browser application's components. | Standard for each part; tests map to the acceptance criteria (C08), on the same database as the deployment. |
+| **Packaging** | One executable JAR, in one container image, so the same artefact runs locally and in the deployment (ADR-0001: one deployable). | Simple to deploy on most hosting platforms. |
+
+**Alternatives considered:**
+- **H2 (embedded, file mode) instead of PostgreSQL:** nothing to install, but it isn't meant for a deployed application: data lives in a file on the application's machine, which many hosting platforms erase on restart, and its SQL differs from a server database. Rejected once a deployment was confirmed.
+- **MySQL or MariaDB instead of PostgreSQL:** equally valid; PostgreSQL is proposed for its wider support on free hosting tiers and its case-insensitive and partial indexes (useful for unique team names, D06).
+- **Plain JavaScript instead of React:** no build step, but the board, filters, comments and assignees would end up re-creating parts of a framework. Proposed first, then replaced at the user's request.
+- **Vue or Angular instead of React:** Vue is equally suitable and simpler to learn, with a smaller ecosystem; Angular is heavy for 23 stories and one developer.
+- **Server-rendered pages (e.g. Thymeleaf with htmx):** no second toolchain, but the client would no longer use the JSON API in `openapi.yaml` (AS01), so the contract would have to be revised.
+
+**Deployment.** The user confirmed that the application will be deployed. Where it is deployed, and the deployment plan, are left for later (PD13). Whatever the platform, the deployment must:
+- serve the application over HTTPS, because the session cookie is `Secure` (SEC08, ADR-0002);
+- serve the browser application and the API from the same site (ADR-0002);
+- give the database connection details and the demo account passwords through environment variables or the platform's secret store, never in the repository (SEC10, AGENTS.md §7).
+
+**Not decided here:** these stay pending, with options in [implementation-plan.md, section 1.3](implementation-plan.md#13-pending-technical-decisions):
+- the module-boundary check (PD03);
+- foreign keys between modules (PD04);
+- the concurrency rule (PD05);
+- the password hashing method (PD06);
+- the demo account seed (PD12);
+- the deployment platform (PD13).
+
+**Follow-ups, proposed:** close PD01 in [constraints.md](constraints.md), and add the build, test and style commands to AGENTS.md §10 once the project is created ([implementation-plan.md](implementation-plan.md), increment I0).

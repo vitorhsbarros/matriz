@@ -4,7 +4,7 @@ This document explains the API specification in [openapi.yaml](../openapi.yaml) 
 
 ## 1. Operations
 
-29 operations, grouped by module (ADR-0001). Public registration (US01, `POST /users`) was removed when it became an optional extension ([scope reconciliation](reviews/scope-reconciliation.md), SC01); its design is kept in [section 6](#6-optional-extensions).
+30 operations, grouped by module (ADR-0001). Public registration (US01, `POST /users`) was removed when it became an optional extension ([scope reconciliation](reviews/scope-reconciliation.md), SC01); its design is kept in [section 6](#6-optional-extensions).
 
 | Module | Operation | Method and endpoint | US |
 |---|---|---|---|
@@ -25,7 +25,8 @@ This document explains the API specification in [openapi.yaml](../openapi.yaml) 
 | | Delete a team | `DELETE /teams/{teamId}` | US18 |
 | | Add a member | `POST /teams/{teamId}/members` | US12 |
 | | Remove a member | `DELETE /teams/{teamId}/members/{userId}` | US12 |
-| **Tasks** | List the project's tasks (with filters) | `GET /projects/{projectId}/tasks?status=&priority=` | US06, US24 |
+| **Tasks** | List who can be assigned the project's tasks | `GET /projects/{projectId}/eligible-assignees` | US10, US13 |
+| | List the project's tasks (with filters) | `GET /projects/{projectId}/tasks?status=&priority=` | US06, US24 |
 | | Create a task | `POST /projects/{projectId}/tasks` | US05 |
 | | Get a task's details | `GET /projects/{projectId}/tasks/{taskId}` | US20 |
 | | Edit a task or change its status | `PATCH /projects/{projectId}/tasks/{taskId}` | US07, US08 |
@@ -47,6 +48,7 @@ This document explains the API specification in [openapi.yaml](../openapi.yaml) 
 - **Singleton sub-resources stay singular:** `/session` is the current user's session. Collections are plural.
 - **Assignees are a collection** (`.../assignees`), because a task can have several (FR14). One is added at a time with `POST`. People and teams are removed under separate paths (`.../assignees/users/{userId}`, `.../assignees/teams/{teamId}`), so each identifier is unambiguous.
 - **Comments are nested under their task** (`.../tasks/{taskId}/comments`). They belong to the Tasks module and are only reachable by project members (NFR03).
+- **Eligible assignees have their own read operation** (`.../eligible-assignees`), served by Tasks. It applies the eligibility rules (project members; teams whose members are all in the project, D09) in one place, the server, so the client doesn't repeat them. `addTaskAssignee` still checks them again (US10 AC05). Added for the [implementation plan](implementation-plan.md).
 - **Search and filters are query parameters** on the existing lists: `?name=` on the dashboard (US23), and `?status=` and `?priority=` on the tasks (US24), each repeatable.
 - **Members are added by email** (D04), so the request body is `{email}`. They are removed by their identifier in the URL.
 
@@ -182,6 +184,7 @@ Successful scenarios map to `2xx` responses with the data described in each oper
 | US08 | AC07 | `200`; a past due date is only checked if it changes (D12) |
 | US10 | AC02 | `POST .../assignees` → `200`; the other assignees stay |
 | US10 | AC03, AC10 | `DELETE .../assignees/users/{userId}` → `200`; `assignees: []` when the last one is removed |
+| US10, US13 | AC01 | `GET .../eligible-assignees` → `200`; only members, and teams whose members are all in the project |
 | US10 | AC04, AC05 | `422` — "The assignee must be a member of the project." |
 | US10 | AC07, AC08, US13 AC09 | `200`, unchanged, no error |
 | US13 | AC03 | `DELETE .../assignees/teams/{teamId}` → `200` |

@@ -716,6 +716,45 @@ paths:
               example: {type: about:blank, title: Unprocessable Content, status: 422, detail: "The team manager cannot be removed."}
 
   # ---------------------------------------------------------------- Tasks
+  /projects/{projectId}/eligible-assignees:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Tasks]
+      operationId: listEligibleAssignees
+      summary: List who can be assigned the project's tasks
+      description: |
+        Returns the people and teams that can be assigned a task of this project right
+        now, for the assignee selector (US10, US13):
+
+        - **people:** every member of the project, sorted by name (US10 AC04);
+        - **teams:** every team whose members are all members of the project, sorted by
+          name (D09, US13 AC04). Every user can see every team (D05).
+
+        The list helps the user choose; it doesn't replace the check in
+        `addTaskAssignee`, which runs again when assigning (US10 AC05). People and teams
+        that are already assignees of a task are included; the client can hide them.
+        User stories: US10, US13.
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: The eligible people and teams.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EligibleAssignees'
+              example:
+                people:
+                  - {userId: 0b9f3c1e-6a2d-4e8f-9c1b-2a3d4e5f6a70, name: Ana Silva}
+                  - {userId: 3f6b2d1a-9c8e-4b7a-a1d2-6e5f4c3b2a10, name: Rui Costa}
+                teams:
+                  - {teamId: 7a1e9b4c-2d3f-4e5a-8b6c-9d0e1f2a3b4c, name: Design}
+        '401':
+          $ref: '#/components/responses/NotLoggedIn'
+        '404':
+          $ref: '#/components/responses/ProjectNotFound'
+
   /projects/{projectId}/tasks:
     parameters:
       - $ref: '#/components/parameters/ProjectId'
@@ -1706,6 +1745,32 @@ components:
         name:
           type: string
           description: The team's name. The task list shows it followed by "(team)".
+
+    EligibleAssignees:
+      type: object
+      required: [people, teams]
+      properties:
+        people:
+          type: array
+          items:
+            type: object
+            required: [userId, name]
+            properties:
+              userId:
+                $ref: '#/components/schemas/Identifier'
+              name:
+                type: string
+        teams:
+          type: array
+          items:
+            type: object
+            required: [teamId, name]
+            properties:
+              teamId:
+                $ref: '#/components/schemas/Identifier'
+              name:
+                type: string
+                description: The interface shows it followed by "(team)".
 
     CommentRequest:
       type: object
