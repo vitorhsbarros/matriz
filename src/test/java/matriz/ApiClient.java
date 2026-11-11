@@ -6,6 +6,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Optional;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Sends real HTTP requests to the running application, as a browser or a direct API call would, and
@@ -39,6 +41,23 @@ final class ApiClient {
             int start = body.indexOf(key) + key.length();
             return body.substring(start, body.indexOf('"', start));
         }
+
+        /** The whole JSON body. */
+        JsonNode json() {
+            return JSON.readTree(body);
+        }
+
+        /** The {@code Location} header of a created resource. */
+        String location() {
+            return raw.headers().firstValue("Location").orElseThrow();
+        }
+    }
+
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
+    /** A JSON body from a map, with strings and numbers escaped properly. */
+    static String json(Object value) {
+        return JSON.writeValueAsString(value);
     }
 
     private final HttpClient http = HttpClient.newHttpClient();

@@ -276,6 +276,8 @@ This choice settles open point OP2 of the data model and the "session storage" r
 | AS16 | The dashboard totals are computed by the server and returned with the list, so they stay complete while a search narrows it (D14). | Computing them in the client would need a second call without the search. |
 | AS17 | Filters with several values use repeated query parameters (`?priority=HIGH&priority=LOW`). | Common form-style encoding (OpenAPI `style: form`, `explode: true`). |
 | AS18 | Someone who isn't the author gets `403` on a comment, not `404`, because members can see every comment of the project. | Same approach as manager-only actions. |
+| AS19 | An identifier in the URL that isn't a UUID (e.g. `/projects/abc`) gets the same `404` as an identifier that doesn't exist, e.g. "Project not found.", not `400`. | No resource can have that identifier, and `404` is the code for a resource in the URL that doesn't exist (section 2). Decided with the user in increment I2 ([implementation-plan.md](implementation-plan.md)). |
+| AS20 | `PATCH` with an empty body (`{}`) changes nothing and returns `200` with the resource, although the schema asks for at least one field (`minProperties: 1`). | Same as saving without changes (US14 AC07); no story defines a message for it. Decided with the user in increment I2. |
 
 ## 6. Optional extensions
 

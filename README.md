@@ -67,8 +67,9 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
   - The MVP was then [reconciled with a new scope](docs/reviews/scope-reconciliation.md) before implementation.
 - **Implementation:** started. Java 21, Spring Boot 4, PostgreSQL with Flyway, and a React + TypeScript browser application built into the same JAR ([docs/architecture.md, section 5](docs/architecture.md#5-technology-stack)). Done so far, from the [implementation plan](docs/implementation-plan.md):
   - I0: the application and its persistence are set up;
-  - I1: log-in, the current user and log-out with the demo accounts (US19, US02), and the project access check that the next increments use.
-- **Next step:** increment I2, projects, tasks, the board and the home dashboard (US03, US05, US06, US04).
+  - I1: log-in, the current user and log-out with the demo accounts (US19, US02), and the project access check that the next increments use;
+  - I2: project management, the first complete path from the screen to the database: the home dashboard with task counts and search, and creating, opening, editing and deleting projects (US03, US04, US23, US14, US15).
+- **Next step:** increment I3, tasks and the project board (US05, US06).
 
 ## Running the application
 
@@ -96,6 +97,15 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
 **Working on the browser application:** `cd frontend && npm install && npm run dev` starts Vite on `http://localhost:5173`, which forwards `/api` to the application on port 8080 (or on `MATRIZ_API_PORT`, e.g. `MATRIZ_API_PORT=8081 npm run dev`). `npm test` runs its tests.
 
 **Demo accounts** (made-up people, PRI05): `ana@example.com`, `rui@example.com` and `sara@example.com`, with the passwords set in `.env`. In the project *Website*, Ana is the manager, Rui is a member and Sara is not a member; in *App*, Rui is the manager and Ana is a member. Log in with any of them on the start page.
+
+**What can be done now** (increments I1 and I2):
+- **Log in and out** with a demo account. The header shows who is logged in.
+- **Home dashboard** (*My projects*): your projects, sorted by name, with your role and the number of tasks in each status, and the totals in *All my projects*. **Search projects** narrows the list; the totals stay the same.
+- **New project:** you become its manager.
+- **Open a project** from the list. Its address (`#/projects/<id>`) survives a reload. The task board arrives in I3.
+- **As the manager:** **Edit** the name and description, and **Delete project** after confirming. Deleting also deletes the project's tasks and comments.
+- Members see the project but not Edit or Delete; anyone else gets "Project not found.".
+- Projects are stored in PostgreSQL, so they are still there after restarting the application.
 
 **Sessions** ([ADR-0002](docs/architecture/adr/ADR-0002-session-cookie-authentication.md); details in [docs/api-contract.md, section 4](docs/api-contract.md#4-authentication)):
 - Log-in starts a session on the server, stored in PostgreSQL, and sets the `MATRIZ_SESSION` cookie (`HttpOnly`, `Secure`, `SameSite=Lax`). Every log-in gets a new session identifier and a new CSRF token.

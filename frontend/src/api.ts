@@ -87,3 +87,34 @@ export async function logOut(): Promise<void> {
   await callLoggedIn<void>("DELETE", "/session");
   csrfToken = null;
 }
+
+// ---------------------------------------------------------------- projects (US03, US04, US14, US15, US23)
+
+export type Role = "MANAGER" | "MEMBER";
+export type TaskCounts = { toDo: number; inProgress: number; done: number };
+export type ProjectSummary = { id: string; name: string; role: Role; taskCounts: TaskCounts };
+export type ProjectDashboard = { totals: TaskCounts; projects: ProjectSummary[] };
+export type Project = { id: string; name: string; description: string | null; role: Role };
+
+/** The home dashboard; `name` narrows the list, never the totals (US23, D14). */
+export async function getDashboard(name = ""): Promise<ProjectDashboard> {
+  const query = name.trim() === "" ? "" : `?name=${encodeURIComponent(name)}`;
+  return (await callLoggedIn<ProjectDashboard>("GET", `/projects${query}`))!;
+}
+
+export async function createProject(name: string, description: string): Promise<Project> {
+  return (await callLoggedIn<Project>("POST", "/projects", { name, description }))!;
+}
+
+export async function getProject(id: string): Promise<Project> {
+  return (await callLoggedIn<Project>("GET", `/projects/${encodeURIComponent(id)}`))!;
+}
+
+/** Sends both fields; an empty description clears it (US14 AC02). */
+export async function updateProject(id: string, name: string, description: string): Promise<Project> {
+  return (await callLoggedIn<Project>("PATCH", `/projects/${encodeURIComponent(id)}`, { name, description }))!;
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  await callLoggedIn<void>("DELETE", `/projects/${encodeURIComponent(id)}`);
+}
