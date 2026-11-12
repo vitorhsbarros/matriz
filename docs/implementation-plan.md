@@ -377,6 +377,15 @@ The prompt is in [docs/prompts/frontend.md](prompts/frontend.md). Every MVP stor
 - **Theme and logo** (user's requests, 2026-11-11): light is the default whatever the system's setting, with a Dark mode / Light mode button; the logo is three equal strokes at 45 degrees in the status colours, and the theme button shows a moon or a sun icon.
 - **Safari:** the session cookie's `Secure` flag can be turned off for `http://localhost` with `MATRIZ_COOKIE_SECURE=false` (user's approval), because Safari keeps no `Secure` cookie there; it stays on by default and on any server (SEC06, SEC08).
 
+### Verification of the MVP — done on 2026-11-12
+
+The prompt is in [docs/prompts/verification.md](prompts/verification.md), and the record in [docs/verification.md](verification.md).
+
+- **Scope:** nine cases: access, projects, task persistence, validation, status and priority, assignees, comments, authorization in the API, and deleting and errors.
+- **Result:** 63 checks, all Pass. The data survived a back-end restart and a PostgreSQL restart; the seed changed nothing; table fingerprints confirm it.
+- **Three new automated tests** in `VerificationScenariosTest`, one each for cases 04 (validation), 08 (authorization with changed identifiers) and 03 (a creation and the stored row). `./mvnw verify`: 174 back-end and 46 browser application tests pass.
+- **No bug found,** so no fix was needed. What couldn't be run is listed in the record, section 6.
+
 ## 6. Operations per increment
 
 | Increment | Operations |

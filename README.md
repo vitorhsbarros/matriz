@@ -52,6 +52,7 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
 
 | Folder | Contents |
 |---|---|
+| [docs/verification.md](docs/verification.md) | Verification of the MVP: for each scenario, the expected result, the observed result and the evidence (tests, screenshots in [docs/verification/](docs/verification/), database checks), and how the data survives restarts. |
 | [docs/reviews/](docs/reviews/) | Critical reviews of the documentation, with the decisions taken on each finding. |
 | [docs/prompts/](docs/prompts/) | The prompts used to produce the documentation with AI assistance. |
 | [docs/requirements-v1.md](docs/requirements-v1.md) | First version of the requirements, kept for history. |
