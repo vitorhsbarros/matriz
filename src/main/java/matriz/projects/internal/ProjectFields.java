@@ -1,7 +1,6 @@
 package matriz.projects.internal;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.web.ErrorResponseException;
 
 /**
@@ -40,7 +39,6 @@ final class ProjectFields {
     }
 
     private static ErrorResponseException invalid(String detail) {
-        HttpStatus status = HttpStatus.UNPROCESSABLE_CONTENT;
-        return new ErrorResponseException(status, ProblemDetail.forStatusAndDetail(status, detail), null);
+        return Problems.problem(HttpStatus.UNPROCESSABLE_CONTENT, detail);
     }
 }

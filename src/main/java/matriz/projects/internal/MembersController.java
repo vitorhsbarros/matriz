@@ -1,5 +1,7 @@
 package matriz.projects.internal;
 
+import static matriz.projects.internal.Problems.problem;
+
 import java.util.List;
 import java.util.UUID;
 import matriz.accounts.AccountDirectory;
@@ -7,11 +9,8 @@ import matriz.projects.ManagerOnlyAction;
 import matriz.projects.ProjectAccess;
 import matriz.projects.ProjectMembers.Member;
 import matriz.projects.ProjectNotFoundException;
-import matriz.projects.ProjectRole;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -82,12 +81,7 @@ class MembersController {
     void remove(@PathVariable String projectId, @PathVariable String userId, Authentication authentication) {
         UUID project = projectId(projectId);
         access.requireManager(project, userId(authentication), ManagerOnlyAction.MANAGE_MEMBERS);
-        UUID user;
-        try {
-            user = UUID.fromString(userId);
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw problem(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND);   // AS19
-        }
+        UUID user = Problems.idOr(userId, () -> problem(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
         if (user.equals(members.managerOf(project))) {
             throw problem(HttpStatus.UNPROCESSABLE_CONTENT, MANAGER_CANNOT_BE_REMOVED);
         }
@@ -97,18 +91,11 @@ class MembersController {
     }
 
     private static UUID projectId(String value) {
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw new ProjectNotFoundException();   // AS19
-        }
+        return Problems.idOr(value, ProjectNotFoundException::new);   // AS19
     }
 
     private static UUID userId(Authentication authentication) {
         return UUID.fromString(authentication.getName());
     }
 
-    private static ErrorResponseException problem(HttpStatus status, String detail) {
-        return new ErrorResponseException(status, ProblemDetail.forStatusAndDetail(status, detail), null);
-    }
 }

@@ -1,5 +1,7 @@
 package matriz.tasks.internal;
 
+import static matriz.tasks.internal.Problems.problem;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,11 +17,9 @@ import matriz.teams.TeamDirectory;
 import matriz.teams.TeamDirectory.TeamInfo;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.ErrorResponseException;
 
 /**
  * A task's assignees: people and teams, each at most once (FR14, R04; docs/database.md: TASK_ASSIGNEE_USER,
@@ -142,7 +142,4 @@ class TaskAssignees {
         return "team".equals(assignee.type()) ? name + " (team)" : name;
     }
 
-    private static ErrorResponseException problem(HttpStatus status, String detail) {
-        return new ErrorResponseException(status, ProblemDetail.forStatusAndDetail(status, detail), null);
-    }
 }

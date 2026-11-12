@@ -1,5 +1,7 @@
 package matriz.tasks.internal;
 
+import static matriz.tasks.internal.Problems.problem;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -10,10 +12,8 @@ import java.util.UUID;
 import matriz.projects.ProjectMembers;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -119,12 +119,7 @@ class CommentsController {
 
     /** The comment, if it is in the task and the logged-in user wrote it (AC05, AC07; SEC11). */
     private Row ownComment(UUID task, String commentId, Authentication authentication) {
-        UUID id;
-        try {
-            id = UUID.fromString(commentId);
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw problem(HttpStatus.NOT_FOUND, COMMENT_NOT_FOUND);   // AS19
-        }
+        UUID id = Problems.idOr(commentId, () -> problem(HttpStatus.NOT_FOUND, COMMENT_NOT_FOUND));
         Row comment = find(task, id).orElseThrow(() -> problem(HttpStatus.NOT_FOUND, COMMENT_NOT_FOUND));
         if (!comment.authorId().equals(TaskPaths.user(authentication))) {
             throw problem(HttpStatus.FORBIDDEN, NOT_AUTHOR);
@@ -163,7 +158,4 @@ class CommentsController {
                 row.getObject("created_at", OffsetDateTime.class), row.getObject("edited_at", OffsetDateTime.class));
     }
 
-    private static ErrorResponseException problem(HttpStatus status, String detail) {
-        return new ErrorResponseException(status, ProblemDetail.forStatusAndDetail(status, detail), null);
-    }
 }

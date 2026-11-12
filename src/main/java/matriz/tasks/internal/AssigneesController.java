@@ -1,13 +1,13 @@
 package matriz.tasks.internal;
 
+import static matriz.tasks.internal.Problems.problem;
+
 import java.util.List;
 import java.util.UUID;
 import matriz.projects.ProjectMembers;
 import matriz.tasks.internal.JdbcTasks.TaskView;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -114,7 +114,4 @@ class AssigneesController {
         }
     }
 
-    private static ErrorResponseException problem(HttpStatus status, String detail) {
-        return new ErrorResponseException(status, ProblemDetail.forStatusAndDetail(status, detail), null);
-    }
 }

@@ -1,5 +1,7 @@
 package matriz.teams.internal;
 
+import static matriz.teams.internal.Problems.problem;
+
 import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
@@ -10,10 +12,8 @@ import matriz.accounts.AccountDirectory.Account;
 import matriz.teams.internal.JdbcTeams.TeamRow;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -139,12 +139,7 @@ class TeamsController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void removeMember(@PathVariable String teamId, @PathVariable String userId, Authentication authentication) {
         TeamRow team = managedTeam(teamId, authentication, ONLY_MANAGER_MANAGES);
-        UUID user;
-        try {
-            user = UUID.fromString(userId);
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw problem(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND);   // AS19
-        }
+        UUID user = Problems.idOr(userId, () -> problem(HttpStatus.NOT_FOUND, MEMBER_NOT_FOUND));
         if (user.equals(team.managerId())) {
             throw problem(HttpStatus.UNPROCESSABLE_CONTENT, MANAGER_CANNOT_BE_REMOVED);
         }
@@ -155,12 +150,8 @@ class TeamsController {
 
     /** The team, once the logged-in user is known to be its manager; "Team not found." first (US12 AC11). */
     private TeamRow managedTeam(String teamId, Authentication authentication, String refusal) {
-        TeamRow team;
-        try {
-            team = teams.row(UUID.fromString(teamId)).orElseThrow(() -> problem(HttpStatus.NOT_FOUND, TEAM_NOT_FOUND));
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw problem(HttpStatus.NOT_FOUND, TEAM_NOT_FOUND);   // AS19
-        }
+        TeamRow team = teams.row(Problems.idOr(teamId, () -> problem(HttpStatus.NOT_FOUND, TEAM_NOT_FOUND)))
+                .orElseThrow(() -> problem(HttpStatus.NOT_FOUND, TEAM_NOT_FOUND));
         if (!team.managerId().equals(userId(authentication))) {
             throw problem(HttpStatus.FORBIDDEN, refusal);
         }
@@ -199,7 +190,4 @@ class TeamsController {
         return UUID.fromString(authentication.getName());
     }
 
-    private static ErrorResponseException problem(HttpStatus status, String detail) {
-        return new ErrorResponseException(status, ProblemDetail.forStatusAndDetail(status, detail), null);
-    }
 }

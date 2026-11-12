@@ -23,12 +23,7 @@ class TaskPaths {
     }
 
     UUID memberProject(String projectId, Authentication authentication) {
-        UUID project;
-        try {
-            project = UUID.fromString(projectId);
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw new ProjectNotFoundException();   // AS19
-        }
+        UUID project = Problems.idOr(projectId, ProjectNotFoundException::new);   // AS19
         access.requireMember(project, user(authentication));
         return project;
     }

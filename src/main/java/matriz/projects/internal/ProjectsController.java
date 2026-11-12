@@ -102,13 +102,9 @@ class ProjectsController {
         projects.delete(project);
     }
 
-    /** An identifier that isn't a UUID can't name any project: "Project not found." like any other. */
+    /** An identifier that isn't a UUID can't name any project: "Project not found." like any other (AS19). */
     private static UUID projectId(String value) {
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw new ProjectNotFoundException();
-        }
+        return Problems.idOr(value, ProjectNotFoundException::new);
     }
 
     private static UUID userId(Authentication authentication) {

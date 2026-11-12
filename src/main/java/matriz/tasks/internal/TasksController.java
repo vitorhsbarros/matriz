@@ -6,13 +6,11 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-import matriz.projects.ProjectAccess;
 import matriz.projects.ProjectNotFoundException;
 import matriz.tasks.internal.JdbcTasks.Fields;
 import matriz.tasks.internal.JdbcTasks.TaskView;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.ErrorResponseException;
@@ -89,13 +87,13 @@ class TasksController {
 
     private final JdbcTasks tasks;
     private final TaskAssignees assignees;
-    private final ProjectAccess access;
+    private final TaskPaths paths;
     private final Clock clock;
 
-    TasksController(JdbcTasks tasks, TaskAssignees assignees, ProjectAccess access, Clock clock) {
+    TasksController(JdbcTasks tasks, TaskAssignees assignees, TaskPaths paths, Clock clock) {
         this.tasks = tasks;
         this.assignees = assignees;
-        this.access = access;
+        this.paths = paths;
         this.clock = clock;
     }
 
@@ -103,7 +101,7 @@ class TasksController {
     @GetMapping
     List<TaskView> list(@PathVariable String projectId, @RequestParam(required = false) List<String> status,
             @RequestParam(required = false) List<String> priority, Authentication authentication) {
-        UUID project = memberProject(projectId, authentication);
+        UUID project = paths.memberProject(projectId, authentication);
         List<String> statuses = status == null ? List.of() : status.stream().map(TaskFields::status).toList();
         List<String> priorities = priority == null ? List.of()
                 : priority.stream().map(TaskFields::priority).toList();
@@ -114,7 +112,7 @@ class TasksController {
     @PostMapping
     ResponseEntity<TaskView> create(@PathVariable String projectId, @RequestBody CreateTaskRequest body,
             Authentication authentication) {
-        UUID project = memberProject(projectId, authentication);
+        UUID project = paths.memberProject(projectId, authentication);
         String title = TaskFields.title(body.title());
         String description = TaskFields.description(body.description());
         LocalDate dueDate = TaskFields.dueDate(body.dueDate(), today(), null);
@@ -133,7 +131,7 @@ class TasksController {
     /** US20. */
     @GetMapping("/{taskId}")
     TaskView get(@PathVariable String projectId, @PathVariable String taskId, Authentication authentication) {
-        UUID project = memberProject(projectId, authentication);
+        UUID project = paths.memberProject(projectId, authentication);
         return assignees.attach(tasks.find(project, taskId(taskId)).orElseThrow(TasksController::taskNotFound));
     }
 
@@ -144,7 +142,7 @@ class TasksController {
     @PatchMapping("/{taskId}")
     TaskView update(@PathVariable String projectId, @PathVariable String taskId,
             @RequestBody UpdateTaskRequest body, Authentication authentication) {
-        UUID project = memberProject(projectId, authentication);
+        UUID project = paths.memberProject(projectId, authentication);
         UUID task = taskId(taskId);
         TaskView current = tasks.find(project, task).orElseThrow(TasksController::taskNotFound);
 
@@ -165,30 +163,14 @@ class TasksController {
     @DeleteMapping("/{taskId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void delete(@PathVariable String projectId, @PathVariable String taskId, Authentication authentication) {
-        UUID project = memberProject(projectId, authentication);
+        UUID project = paths.memberProject(projectId, authentication);
         if (!tasks.delete(project, taskId(taskId))) {
             throw taskNotFound();   // US16 AC05: already deleted by another member
         }
     }
 
-    /** The project in the URL, once the logged-in user is known to be one of its members (DoD03). */
-    UUID memberProject(String projectId, Authentication authentication) {
-        UUID project;
-        try {
-            project = UUID.fromString(projectId);
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw new ProjectNotFoundException();   // AS19
-        }
-        access.requireMember(project, UUID.fromString(authentication.getName()));
-        return project;
-    }
-
     static UUID taskId(String value) {
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException notAnIdentifier) {
-            throw taskNotFound();   // AS19
-        }
+        return Problems.idOr(value, TasksController::taskNotFound);   // AS19
     }
 
     private LocalDate today() {
@@ -196,7 +178,6 @@ class TasksController {
     }
 
     static ErrorResponseException taskNotFound() {
-        return new ErrorResponseException(HttpStatus.NOT_FOUND,
-                ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, TASK_NOT_FOUND), null);
+        return Problems.problem(HttpStatus.NOT_FOUND, TASK_NOT_FOUND);
     }
 }

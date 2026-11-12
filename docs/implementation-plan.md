@@ -386,6 +386,30 @@ The prompt is in [docs/prompts/verification.md](prompts/verification.md), and th
 - **Three new automated tests** in `VerificationScenariosTest`, one each for cases 04 (validation), 08 (authorization with changed identifiers) and 03 (a creation and the stored row). `./mvnw verify`: 174 back-end and 46 browser application tests pass.
 - **No bug found,** so no fix was needed. What couldn't be run is listed in the record, section 6.
 
+### Review for the delivery — done on 2026-11-12
+
+The prompt is in [docs/prompts/delivery.md](prompts/delivery.md). The whole code since I0 was reviewed with AI support, and the findings were approved by the user before any change.
+
+**What was checked:**
+- the 30 operations of `openapi.yaml` against the 30 endpoints of the controllers: they match;
+- that every endpoint on a project, task, assignee or comment checks membership, management or authorship, with the user taken from the session;
+- the validation and error answers, by probing the running application (bodies that aren't JSON, no body, unknown paths and methods, the actuator, a 5000-character search);
+- the browser application for raw HTML (none), and the code for leftover debug output (none).
+
+**Problems found and fixed** (commit "Fix the problems found in the delivery review", with `ReviewRegressionTest`; each test fails without its fix):
+
+| # | Problem | Fix |
+|---|---|---|
+| R1 | A body that isn't JSON got Spring's `415` with a technical message, instead of DoD07's `400` "The request body is not valid." | Mapped to DoD07's answer in `ApiExceptionHandler`. |
+| R2 | A creation racing with a deletion ended in a `500`: a task created while its project was being deleted made the deletion fail; a team assigned while being deleted did the same; a task or comment saved just after its project or task was deleted got a `500`. | Deleting a project or a team locks its row first, so the racing creation is saved first and then deleted with it; a late creation gets "Project not found.", "Task not found." or "Team not found.". |
+| R3 | `openapi.yaml` didn't describe assumptions AS19–AS23. | Added to the contract (documentation commit). |
+| R4 | The Tasks package description still said its behaviour was added later. | Corrected. |
+
+**Refactoring** (its own commit, decision recorded here):
+- **Duplication found:** the helper that builds a refusal (`problem(...)` or `invalid(...)`) was copied 11 times in three modules, and the "identifier in the URL, or not found" conversion 9 times; `TasksController` also had its own copy of `TaskPaths.memberProject`.
+- **Decision: refactor.** Modules may not share internal code (ADR-0001), so each module gets one small `Problems` helper (`projects`, `tasks`, `teams`), with `problem(status, detail)` and `idOr(text, notFound)`; `TasksController` uses `TaskPaths`. Left as they are: the single copy in Accounts, and `AssigneesController.identifier`, whose meaning differs (an invalid identifier means "nothing to remove", not "not found").
+- **Behaviour preserved:** the same 179 back-end and 46 browser application tests pass before and after; the code is 71 lines shorter.
+
 ## 6. Operations per increment
 
 | Increment | Operations |
