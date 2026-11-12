@@ -76,7 +76,7 @@ This document explains the API specification in [openapi.yaml](../openapi.yaml) 
 | `200` | Read, or update that returns the changed resource |
 | `201` | Resource created (with `Location` when it has its own URL) |
 | `204` | Removed, or logged out, with no body |
-| `400` | Body isn't valid JSON, has unknown fields, or has a field of the wrong JSON type |
+| `400` | Body isn't valid JSON (or isn't sent as JSON), has unknown fields, or has a field of the wrong JSON type |
 | `401` | Not logged in, or wrong credentials at log-in |
 | `403` | CSRF token invalid, a member who isn't the manager tries a manager-only action, or someone who isn't the author tries to change a comment |
 | `404` | A resource **in the URL** doesn't exist or isn't accessible |
@@ -281,6 +281,7 @@ This choice settles open point OP2 of the data model and the "session storage" r
 | AS21 | A task's `assignees` are sorted by the name shown, ignoring case: a person's name, or a team's name followed by "(team)". | Matches every example in the stories ("Design (team), Sara Lopes" in US06 AC01, "Ana Silva, Design (team)" in US13 AC02, "Rui Costa, Sara Lopes" in US10 AC02) without storing when each assignee was added. Decided with the user in I4. |
 | AS22 | Identifiers that aren't UUIDs: a team in the URL gets "Team not found.", a member "Member not found.", a comment "Comment not found." (as AS19). In `addTaskAssignee`, a `userId` that isn't a UUID gets "The assignee must be a member of the project." and a `teamId` "Team not found." (AS10). Removing an assignee whose identifier isn't a UUID changes nothing and returns `200`, like removing someone who isn't an assignee. A body that matches neither `AssignToPerson` nor `AssignToTeam` gets `400` (DoD07). | Decided with the user in I4. |
 | AS23 | Anyone logged in who isn't a team's manager gets `403` with the story's message on a manager-only team operation, whether or not they are a member: every user can see every team (D05, PD11), so the `404` used for projects (DoD03) would hide nothing. | Decided with the user in I5. |
+| AS24 | A creation racing with a deletion: a task or comment saved while its project or task is being deleted is deleted with it, and one saved just after gets the `404` of the deleted resource ("Project not found.", "Task not found."); a team assigned while it is being deleted leaves the task, and one assigned just after gets `422` "Team not found.". Deleting a project or a team locks its row first. | Found in the delivery review (R2), with the user's approval. |
 
 ## 6. Optional extensions
 

@@ -22,9 +22,9 @@ info:
     validations fail, only the first one is reported, in the order the fields are
     listed in the request schema.
 
-    **Validation.** `400` is only returned when the body isn't valid JSON, has unknown
-    fields, or has a field of the wrong JSON type (e.g. a number where text is
-    expected). Missing or empty required fields, lengths, formats (email, date) and
+    **Validation.** `400` is only returned when the body isn't valid JSON (including a body
+    sent with a `Content-Type` other than JSON), has unknown fields, or has a field of the
+    wrong JSON type (e.g. a number where text is expected). Missing or empty required fields, lengths, formats (email, date) and
     enum values are business validations: they return `422` with the message from the
     acceptance criteria. The schema keywords `required`, `minLength`, `maxLength`,
     `format` and `enum` document these rules, and must not be enforced by a generic
@@ -33,6 +33,17 @@ info:
     **Text fields.** Leading and trailing spaces are removed before validation, and
     length limits apply to the trimmed value (D01, D02). Emails are compared ignoring
     case (D03).
+
+    **Identifiers in the URL** that aren't UUIDs get the same `404` as identifiers that
+    don't exist ("Project not found.", "Task not found.", "Team not found.", "Member not
+    found.", "Comment not found."), see `docs/api-contract.md`, AS19 and AS22.
+
+    **`PATCH` with an empty body** (`{}`) changes nothing and returns `200` with the
+    resource (AS20).
+
+    **Concurrent changes.** A task or comment saved while its project or task is being
+    deleted is deleted with it; one saved just after gets the `404` of the deleted
+    resource. The last saved edit of the same task wins (D11).
   license:
     name: Proprietary
     identifier: LicenseRef-Proprietary
@@ -467,7 +478,10 @@ paths:
       summary: List all teams
       description: |
         Returns every team with its members, sorted alphabetically by name. Every user can
-        see every team (D05), so tasks can be assigned to them. User stories: US11, US12, US13.
+        see every team (D05, PD11), so tasks can be assigned to them. Members are shown by
+        name, without their emails (PRI04). Anyone who isn't a team's manager gets `403` on
+        that team's manager-only operations, whether or not they are a member (AS23).
+        User stories: US11, US12, US13.
       security:
         - sessionCookie: []
       responses:
@@ -1066,7 +1080,7 @@ paths:
       description: |
         Removes the person from the task's assignees. The other assignees stay (US10 AC03,
         AC10). Removing someone who isn't an assignee succeeds and changes nothing
-        (US10 AC08). User story: US10.
+        (US10 AC08), also when `userId` isn't a valid identifier (AS22). User story: US10.
       responses:
         '200':
           description: Person removed. Returns the whole task.
@@ -1092,8 +1106,8 @@ paths:
       summary: Remove a team from the task's assignees
       description: |
         Removes the team from the task's assignees. The other assignees stay (US13 AC03).
-        Removing a team that isn't an assignee succeeds and changes nothing.
-        User story: US13.
+        Removing a team that isn't an assignee succeeds and changes nothing, also when
+        `teamId` isn't a valid identifier (AS22). User story: US13.
       responses:
         '200':
           description: Team removed. Returns the whole task.
@@ -1712,7 +1726,8 @@ components:
           type: array
           description: |
             Who is responsible for the task: people and teams, each at most once. An empty
-            list means the task is unassigned ("Unassigned").
+            list means the task is unassigned ("Unassigned"). Sorted by the name shown,
+            ignoring case: a person's name, or a team's name followed by "(team)" (AS21).
           items:
             oneOf:
               - $ref: '#/components/schemas/PersonAssignee'

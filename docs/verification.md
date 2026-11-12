@@ -193,4 +193,18 @@ These items weren't run, and aren't counted in the totals above:
 
 ## 7. Known problems
 
-None found in this verification.
+None found in this verification. The delivery review that followed found two more, both fixed with regression tests (`ReviewRegressionTest`, which fail without the fixes), and recorded in implementation-plan.md, "Review for the delivery":
+- **R1:** a body that isn't JSON (e.g. `text/plain`) got `415` with a technical message; it now gets DoD07's `400` "The request body is not valid.".
+- **R2:** a creation racing with a deletion ended in a `500`; the deletion now locks first, and a late creation gets the deleted resource's `404` (api-contract.md, AS24).
+
+After these fixes, `./mvnw verify` runs **179** back-end tests and **46** browser application tests, all passing.
+
+## 8. Examples of AI use
+
+The project was built with an AI assistant (Claude Code), with every decision taken by the developer. Three examples of how a request was handled, decided and checked:
+
+| | Aim of the request | Developer's decision | How it was checked |
+|---|---|---|---|
+| **1. Safari log-in** | The developer reported that in Safari the log-in accepted the credentials but didn't go further. The assistant was asked to make it work. It diagnosed that the session cookie is `Secure` (SEC06), and that Safari, unlike Chrome and Firefox, keeps no `Secure` cookie on `http://localhost`. It proposed making the flag configurable, `Secure` by default. | The developer approved changing a security setting, limited to `http://localhost` through `MATRIZ_COOKIE_SECURE=false` in the local `.env`, with the cookie still `Secure` by default and on any HTTPS server. | Reproduced in WebKit, Safari's engine, before the fix: log-in answered `200`, no cookie was kept, and the screen went back to log-in. With the flag off: the cookie was kept and "My projects" opened. `SessionApiTest` keeps testing the `Secure` cookie, and `CookieDefaultsTest` checks the default stays `true`. |
+| **2. Assigning people while creating a task (suggestion rejected)** | The developer asked whether people and teams could be assigned in the **New task** form. The assistant answered that US05 says a new task starts unassigned, and offered three options: assign from the interface right after creating, change the contract, or leave it as it is. It recommended the first. | The developer **rejected** the recommendation and chose to leave it as it is: tasks are created unassigned and assigned in their details, as US05 says. Nothing was changed. | The choice is recorded in implementation-plan.md (I4–I6 browser application, differences). The behaviour is covered by `TasksApiTest.createATaskWithEveryField` (a new task has no assignees) and case 06 of this record. |
+| **3. Assigning a member who is being removed (PD05)** | The developer asked to implement members and assignees. The assistant pointed out the pending decision PD05 (an assignment saved just after the person left the project, US10 AC05) and explained the options. It then wrote a test that forces both operations to run at the same time. | The developer chose to lock the membership row (option a), after asking for an explanation of the problem. | The test `MembersApiTest.anAssignmentAndARemovalAtTheSameTimeLeaveNoAssignmentBehind` passes. To show that it really tests the lock, the `FOR SHARE` was removed for one run: the test then **failed** ("expected: 0 but was: 1", an assignment survived), and passed again once the lock was back. |

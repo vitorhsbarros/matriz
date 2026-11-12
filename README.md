@@ -74,34 +74,103 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
   - I4 to I6: project members, teams, assigning people and teams to tasks, and comments (US09–US13, US17, US18, US21, US22).
 
   Every MVP story can be used through the browser application, which has its own visual system ([docs/ui/README.md](docs/ui/README.md#visual-system-of-the-browser-application)).
-- **Next step:** to be decided with the user, for example the deployment (PD13).
+- **Verification and delivery:** every MVP scenario was verified and recorded in [docs/verification.md](docs/verification.md), and the code was reviewed for the delivery ([docs/implementation-plan.md](docs/implementation-plan.md#review-for-the-delivery--done-on-2026-11-12)). The delivered version is the Git tag `v1.0.0`.
+- **Not done yet:** the deployment to a hosting platform (PD13, pending).
 
 ## Running the application
 
-**Requirements:** Java 21 and Docker (running). Node isn't needed to build: Maven downloads its own copy for the browser application.
+### Requirements
 
-1. **Configuration.** Copy the example file and replace every value. `.env` is ignored by Git; never commit it.
-   ```bash
-   cp .env.example .env
-   ```
-2. **Database.** Start PostgreSQL in a container (it reads `.env`). Data is kept in a Docker volume between restarts.
-   ```bash
-   docker compose up -d --wait
-   ```
-3. **Build and test.** Builds the back end and the browser application into one JAR and runs every test. The tests start their own throw-away PostgreSQL with Testcontainers, so Docker must be running.
-   ```bash
-   ./mvnw verify
-   ```
-4. **Start.** Applies the database migrations and, if `MATRIZ_DEMO_SEED=true`, creates the demo accounts and projects that don't exist yet. Existing data is never changed or deleted.
-   ```bash
-   java -jar target/matriz-0.1.0-SNAPSHOT.jar
-   ```
-   Or, without building the JAR first: `./mvnw spring-boot:run`. Use another port with `SERVER_PORT=8081`.
-5. **Check.** `http://localhost:8080/actuator/health` answers `{"status":"UP"}` when the database is reachable, and `http://localhost:8080/` shows the log-in screen.
+| What | Version | Why |
+|---|---|---|
+| Java (JDK) | 21 | Builds and runs the application. |
+| Docker, running | Docker Desktop or Docker Engine with Compose | Runs PostgreSQL 17 for the application, and a throw-away PostgreSQL for the tests (Testcontainers). |
+| Git | any recent | To get the code. |
+| Free ports | 5432 (PostgreSQL) and 8080 (the application; another one can be chosen) | |
 
-**Working on the browser application:** `cd frontend && npm install && npm run dev` starts Vite on `http://localhost:5173`, which forwards `/api` to the application on port 8080 (or on `MATRIZ_API_PORT`, e.g. `MATRIZ_API_PORT=8081 npm run dev`). `npm test` runs its tests.
+Node and npm aren't needed: Maven downloads its own copy (Node 24) to build and test the browser application. Maven isn't needed either: the project includes the Maven wrapper (`./mvnw`).
 
-**Demo accounts** (made-up people, PRI05): `ana@example.com`, `rui@example.com` and `sara@example.com`, with the passwords set in `.env`. In the project *Website*, Ana is the manager, Rui is a member and Sara is not a member; in *App*, Rui is the manager and Ana is a member. Log in with any of them on the start page.
+### 1. Get the code
+
+```bash
+git clone https://github.com/vitorhsbarros/matriz.git
+cd matriz
+```
+
+### 2. Configure
+
+Copy the example configuration. `.env` is ignored by Git; never commit it.
+
+```bash
+cp .env.example .env
+```
+
+Then replace the example values with your own. Every value in `.env.example` is made up, and works as it is for a local try-out.
+
+| Variable | What it sets |
+|---|---|
+| `MATRIZ_DB_NAME`, `MATRIZ_DB_USER`, `MATRIZ_DB_PASSWORD` | The database, user and password that `compose.yaml` creates, and that the application uses. |
+| `MATRIZ_DB_URL` | Where the application finds the database: `jdbc:postgresql://localhost:5432/matriz`. |
+| `MATRIZ_DEMO_SEED` | `true` to create the demo accounts and projects at start-up (see below). |
+| `MATRIZ_DEMO_PASSWORD_ANA`, `…_RUI`, `…_SARA` | The demo accounts' passwords, 8 to 128 characters. They are stored only as BCrypt hashes. |
+| `MATRIZ_COOKIE_SECURE` | `false` only for `http://localhost`, so Safari keeps the session cookie; `true` (the default if unset) anywhere else, which must use HTTPS. |
+| `SERVER_PORT` (optional) | The application's port, 8080 by default. |
+
+### 3. Start the database
+
+```bash
+docker compose up -d --wait
+```
+
+This starts PostgreSQL 17.10 in a container, with the database, user and password from `.env`. The data is kept in a Docker volume between restarts.
+
+### 4. Build and run the tests
+
+```bash
+./mvnw verify
+```
+
+This builds the back end and the browser application into one JAR (`target/matriz-0.1.0-SNAPSHOT.jar`) and runs every test:
+- the back-end tests, which start their own throw-away PostgreSQL with Testcontainers;
+- the browser application tests (Vitest);
+- `ModularityTest`, which checks the module boundaries.
+
+The first run downloads the dependencies and takes a few minutes. Later runs take about two. To run one back-end test class only: `./mvnw test -Dtest=TasksApiTest -Dskip.npm -Dskip.installnodenpm`.
+
+### 5. Start the application
+
+```bash
+java -jar target/matriz-0.1.0-SNAPSHOT.jar
+```
+
+Or, without building the JAR first: `./mvnw spring-boot:run`. To use another port: `SERVER_PORT=8081 java -jar target/matriz-0.1.0-SNAPSHOT.jar`.
+
+At start-up the application:
+- **creates or updates the schema** with the Flyway migrations in `src/main/resources/db/migration/<module>`. Nothing has to be created by hand, and existing data is never changed by a migration;
+- **adds the demo data,** when `MATRIZ_DEMO_SEED=true`: the three accounts and two projects below, only those that don't exist yet. Existing data is never changed or deleted, so restarting is safe.
+
+### 6. Open it
+
+- `http://localhost:8080/actuator/health` answers `{"status":"UP"…}` when the database is reachable.
+- `http://localhost:8080/` shows the log-in screen. Chrome, Firefox and Safari work.
+
+**Demo accounts** (made-up people, PRI05), with the passwords set in `.env`:
+
+| Account | Name | In *Website* | In *App* |
+|---|---|---|---|
+| `ana@example.com` | Ana Silva | manager | member |
+| `rui@example.com` | Rui Costa | member | manager |
+| `sara@example.com` | Sara Lopes | not a member | not a member |
+
+Log in as different people to see the access rules: Sara gets "Project not found." for *Website*, and Rui can work on its tasks but can't edit or delete it.
+
+### Stop
+
+`Ctrl+C` stops the application. `docker compose down` stops PostgreSQL and keeps its data; `docker compose down -v` deletes it.
+
+### Working on the browser application
+
+`cd frontend && npm ci && npm run dev` starts Vite on `http://localhost:5173`, which forwards `/api` to the application on port 8080, or on `MATRIZ_API_PORT` (e.g. `MATRIZ_API_PORT=8081 npm run dev`). `npm test` runs its tests. This needs Node 24 installed.
 
 **What can be done now** (every MVP story):
 - **Log in and out** with a demo account. The header shows who is logged in.
@@ -128,4 +197,3 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
 - A session ends after **30 minutes without requests** (PD02), or at once with **Log out**. The application then shows the log-in screen with "Please log in to continue.".
 - The cookie is `Secure`, so outside your own machine the application must be served over HTTPS (SEC08). Safari doesn't keep a `Secure` cookie on `http://localhost` (log-in is accepted but doesn't stick), so a local `.env` sets `MATRIZ_COOKIE_SECURE=false`, as in `.env.example`. Leave it `true`, or unset, anywhere else.
 
-**Stop:** `Ctrl+C` stops the application; `docker compose down` stops PostgreSQL and keeps its data (`docker compose down -v` deletes it).

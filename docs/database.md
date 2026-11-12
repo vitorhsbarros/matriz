@@ -102,6 +102,14 @@ erDiagram
 
 Each entity belongs to exactly one module. A module only reads and writes its own entities, and refers to other modules' entities by identifier (ADR-0001).
 
+**Physical names.** The tables are created by Flyway migrations, one folder per module (`src/main/resources/db/migration/<module>`). They take the entity names in lower case, except where a name is reserved in SQL:
+
+| Entity | Table |
+|---|---|
+| USER | `users` |
+| COMMENT | `task_comment` |
+| SESSION | `spring_session` and `spring_session_attributes`, Spring Session's own tables; the CSRF token is a session attribute |
+
 ## 3. Entities
 
 All text fields are stored without leading or trailing spaces, and length limits apply after trimming (D01, D02).

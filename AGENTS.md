@@ -94,10 +94,14 @@ End every task with a short report:
 - **Commits:** small and focused, with a message that says what changed and why.
 - **Technology:** the stack is in [docs/architecture.md, section 5](docs/architecture.md#5-technology-stack): Java 21, Spring Boot 4, PostgreSQL with Flyway, React + TypeScript with Vite, Maven. Don't add other languages, frameworks or tools without the user's approval (section 6).
 - **Commands** (details in [README.md](README.md#running-the-application)):
-  - **Build and test everything:** `./mvnw verify` (needs Docker running for Testcontainers).
-  - **Start the database:** `docker compose up -d --wait` (reads `.env`; copy `.env.example`).
-  - **Run the application:** `./mvnw spring-boot:run`, or `java -jar target/matriz-0.1.0-SNAPSHOT.jar`.
-  - **Browser application only:** in `frontend/`, `npm run dev`, `npm test`, `npm run build`.
+  - **Configuration:** `cp .env.example .env`, then replace every value. `.env` is never committed.
+  - **Start the database:** `docker compose up -d --wait` (reads `.env`). `docker compose down` stops it and keeps the data.
+  - **Build and test everything:** `./mvnw verify`: the back-end tests (Testcontainers, so Docker must be running), the browser application tests, `ModularityTest`, and the JAR with the browser application inside.
+  - **One test class, back end only:** `./mvnw test -Dtest=TasksApiTest -Dskip.npm -Dskip.installnodenpm`.
+  - **Run the application:** `java -jar target/matriz-0.1.0-SNAPSHOT.jar`, or `./mvnw spring-boot:run`. Another port: `SERVER_PORT=8081 java -jar …`. Flyway creates or updates the schema at start-up, and `MATRIZ_DEMO_SEED=true` adds the demo accounts and projects that are missing.
+  - **Check it runs:** `curl http://localhost:8080/actuator/health` answers `{"status":"UP"…}`.
+  - **Browser application only:** in `frontend/`, `npm ci` once, then `npm run dev` (Vite on port 5173, forwarding `/api` to port 8080 or to `MATRIZ_API_PORT`), `npm test`, `npm run build`.
   - **Module boundaries:** checked by `ModularityTest` (Spring Modulith) in every build.
+  - **Verification record:** [docs/verification.md](docs/verification.md) lists each scenario's expected and observed results and their evidence. Update it when a check is run again.
 - **Style:** no formatter or linter is configured yet. Follow the existing code: 4-space indentation in Java, 2 spaces in TypeScript, JSON and YAML.
 - **Database changes:** only through new Flyway migrations in the owning module's folder (`src/main/resources/db/migration/<module>`). Never edit a migration that has already been applied.

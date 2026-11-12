@@ -28,7 +28,7 @@ Every decision in this plan is marked **Confirmed** (with its source) or **Propo
 | X02 | **ADR-0001 and ADR-0002 describe the earlier scope** (13 stories; "users sign up"). The decisions themselves still hold. | ADR-0001 Context, ADR-0002 Context and Decision 1 | **Proposed:** leave the ADRs as historical records (they were accepted for that scope) and note in architecture.md that sign-up is now an optional extension. Already noted in docs/architecture/README.md. |
 | X03 | **Two architecture choices from the scope reconciliation weren't explicitly confirmed by the user:** the home dashboard is served by the Tasks module, and Projects exposes *Get user names*. | 04-solution-architecture.md §3.4, scope-reconciliation.md "Changes that follow" | **Resolved (user, Q3):** both confirmed. |
 | X04 | **A project manager can't delete other people's comments (US22), but deleting the project deletes all its comments (US15).** Not a contradiction in the rules, but it may surprise users. | US15, US22, SEC11 | **Proposed:** keep as it is; note it in the access matrix (section 3). |
-| X05 | **The system-architect agent's example** still says "one assignee per task". | .claude/agents/system-architect.md line 75 | **Proposed:** update the example to "several assignees per task" (outside this task; needs approval). |
+| X05 | **The system-architect agent's example** still says "one assignee per task". | .claude/agents/system-architect.md line 75 | **Resolved** in the delivery review: the example now says "several assignees per task". |
 | X06 | **A broken link in the closed review-01** (`03-alternatives.md` without the `architecture/` folder). | docs/reviews/review-01.md | Report only: closed reviews aren't edited (AGENTS.md §5). |
 
 ### 1.3 Pending technical decisions
@@ -215,7 +215,7 @@ Seven increments, in about 15 working days (ASM08). Each one ends with a working
 
 **Differences from the plan above:**
 - **DoD07 (Problem Details for a malformed body) moved to I1**, because I0 has no API operation to test it with.
-- **Physical names differ from database.md** where a name is reserved in SQL: USER is `users`, COMMENT is `task_comment`. SESSION is stored in Spring Session's tables (`spring_session`, `spring_session_attributes`), with the CSRF token as a session attribute. **Proposed:** add a note on these names to database.md.
+- **Physical names differ from database.md** where a name is reserved in SQL: USER is `users`, COMMENT is `task_comment`. SESSION is stored in Spring Session's tables (`spring_session`, `spring_session_attributes`), with the CSRF token as a session attribute. Added to database.md in the delivery review.
 - **The Teams and Tasks tables were created now**, with the whole schema, as the prompt asked; their behaviour still arrives in I2–I7.
 
 **Left for later:**

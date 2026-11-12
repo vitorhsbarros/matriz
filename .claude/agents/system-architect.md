@@ -72,7 +72,7 @@ docs/architecture/
 
 **`02-domain-model.md`**
 - A conceptual model independent of any technology: entities, their attributes and their relationships (users, projects, memberships, teams, tasks, assignments, statuses), as a Mermaid class diagram.
-- The business rules and invariants the architecture must protect (e.g. one assignee per task, the manager can't be removed, D09, D10, D11), each traced to its source.
+- The business rules and invariants the architecture must protect (e.g. several assignees per task, the manager can't be removed, D09, D10, D11), each traced to its source.
 
 **`03-alternatives.md`**
 
