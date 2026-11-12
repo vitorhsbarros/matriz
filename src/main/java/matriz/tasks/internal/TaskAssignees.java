@@ -13,6 +13,7 @@ import matriz.tasks.internal.JdbcTasks.AssigneeView;
 import matriz.tasks.internal.JdbcTasks.TaskView;
 import matriz.teams.TeamDirectory;
 import matriz.teams.TeamDirectory.TeamInfo;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -93,8 +94,12 @@ class TaskAssignees {
         if (!members.lockIfAllMembers(projectId, team.memberIds())) {
             throw problem(HttpStatus.UNPROCESSABLE_CONTENT, TEAM_NOT_IN_PROJECT);
         }
-        jdbc.sql("insert into task_assignee_team (task_id, team_id) values (?, ?) on conflict do nothing")
-                .params(taskId, teamId).update();
+        try {
+            jdbc.sql("insert into task_assignee_team (task_id, team_id) values (?, ?) on conflict do nothing")
+                    .params(taskId, teamId).update();
+        } catch (DataIntegrityViolationException teamDeletedInTheMeantime) {
+            throw problem(HttpStatus.UNPROCESSABLE_CONTENT, TEAM_NOT_FOUND);   // AS10
+        }
     }
 
     /** US10 AC03, AC08, AC10: removing someone who isn't an assignee changes nothing. */

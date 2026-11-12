@@ -68,12 +68,17 @@ final class ApiClient {
     }
 
     Response send(String method, String path, String jsonBody, String sessionCookie, String csrfToken) {
+        return send(method, path, jsonBody, jsonBody == null ? null : "application/json", sessionCookie, csrfToken);
+    }
+
+    /** As {@link #send(String, String, String, String, String)}, with any {@code Content-Type}. */
+    Response send(String method, String path, String body, String contentType, String sessionCookie, String csrfToken) {
         HttpRequest.Builder request = HttpRequest.newBuilder(URI.create(base + path))
-                .method(method, jsonBody == null
+                .method(method, body == null
                         ? HttpRequest.BodyPublishers.noBody()
-                        : HttpRequest.BodyPublishers.ofString(jsonBody));
-        if (jsonBody != null) {
-            request.header("Content-Type", "application/json");
+                        : HttpRequest.BodyPublishers.ofString(body));
+        if (contentType != null) {
+            request.header("Content-Type", contentType);
         }
         if (sessionCookie != null) {
             request.header("Cookie", COOKIE + "=" + sessionCookie);

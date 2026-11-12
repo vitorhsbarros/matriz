@@ -88,6 +88,8 @@ class JdbcTeams implements TeamDirectory {
      */
     @Transactional
     void delete(UUID teamId) {
+        // Locked first, so an assignment of this team made at the same moment is saved before, and removed here.
+        jdbc.sql("select id from team where id = ? for update").param(teamId).query(UUID.class).optional();
         events.publishEvent(new TeamDeleted(teamId));
         jdbc.sql("delete from team where id = ?").param(teamId).update();
     }

@@ -61,9 +61,14 @@ class JdbcProjects implements MyProjects {
     /**
      * Deletes the project with everything that belongs to it, in one transaction (FR05, R17): first the other
      * modules' data through {@link ProjectDeleted}, then the project, whose memberships go with it (cascade).
+     *
+     * <p>The project's row is locked first: a task being created in it at the same moment holds the row until it is
+     * saved, so the deletion waits and then deletes that task too; a task created after the deletion is refused
+     * with "Project not found." (TasksController).
      */
     @Transactional
     void delete(UUID projectId) {
+        jdbc.sql("select id from project where id = ? for update").param(projectId).query(UUID.class).optional();
         events.publishEvent(new ProjectDeleted(projectId));
         jdbc.sql("delete from project where id = ?").param(projectId).update();
     }

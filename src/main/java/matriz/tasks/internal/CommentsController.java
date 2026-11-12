@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import matriz.projects.ProjectMembers;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -82,8 +83,12 @@ class CommentsController {
         UUID task = paths.task(paths.memberProject(projectId, authentication), taskId).id();
         String text = text(body.text());
         UUID id = UUID.randomUUID();
-        jdbc.sql("insert into task_comment (id, task_id, author_id, text) values (?, ?, ?, ?)")
-                .params(id, task, TaskPaths.user(authentication), text).update();
+        try {
+            jdbc.sql("insert into task_comment (id, task_id, author_id, text) values (?, ?, ?, ?)")
+                    .params(id, task, TaskPaths.user(authentication), text).update();
+        } catch (DataIntegrityViolationException taskDeletedInTheMeantime) {
+            throw TasksController.taskNotFound();   // the task was deleted while the comment was being saved
+        }
         return find(task, id).map(this::view).orElseThrow();
     }
 

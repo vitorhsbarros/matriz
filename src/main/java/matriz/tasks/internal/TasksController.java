@@ -10,6 +10,7 @@ import matriz.projects.ProjectAccess;
 import matriz.projects.ProjectNotFoundException;
 import matriz.tasks.internal.JdbcTasks.Fields;
 import matriz.tasks.internal.JdbcTasks.TaskView;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -119,7 +120,12 @@ class TasksController {
         LocalDate dueDate = TaskFields.dueDate(body.dueDate(), today(), null);
         String priority = body.priority() == null ? "MEDIUM" : TaskFields.priority(body.priority());
 
-        UUID id = tasks.create(project, title, description, dueDate, priority);
+        UUID id;
+        try {
+            id = tasks.create(project, title, description, dueDate, priority);
+        } catch (DataIntegrityViolationException projectDeletedInTheMeantime) {
+            throw new ProjectNotFoundException();   // the project was deleted while the task was being saved
+        }
         return ResponseEntity.created(URI.create("/api/projects/" + project + "/tasks/" + id))
                 .body(assignees.attach(tasks.find(project, id).orElseThrow()));
     }
