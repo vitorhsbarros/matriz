@@ -1,10 +1,11 @@
 import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
-  ApiError, createTask, deleteTask, listTasks, PRIORITIES, PRIORITY_LABEL, Priority, Status, STATUS_LABEL, STATUSES,
-  Task, TaskInput, updateTask,
+  ApiError, assigneesText, createTask, deleteTask, listTasks, PRIORITIES, PRIORITY_LABEL, Priority, Status,
+  STATUS_LABEL, STATUSES, Task, TaskInput, updateTask,
 } from "./api";
 import { ConfirmDelete, deleteTaskMessage } from "./ConfirmDelete";
 import { TaskForm } from "./TaskForm";
+import { Empty, ErrorMessage, Loading, messageOf, PriorityPill, statusClass, useAction } from "./ui";
 
 type Props = { projectId: string };
 
@@ -16,9 +17,9 @@ function toggle<T>(values: T[], value: T): T[] {
 }
 
 // The project's board (US06; wireframe screen 2): one column per status, with its count and its cards, newest
-// first. New task (US05), ← → and drag and drop to change the status (US07), Delete on each card (US16), and
-// the status and priority filters (US24). After every change the board is read again from the API, so the
-// columns and counts are right without reloading the page.
+// first. New task (US05), ← → and drag and drop to change the status (US07), Delete on each card (US16), and the
+// status and priority filters (US24). After every change the board is read again from the API, so the columns and
+// counts are the server's, without reloading the page.
 export function Board({ projectId }: Props) {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -26,6 +27,7 @@ export function Board({ projectId }: Props) {
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const moving = useAction();
   const latest = useRef(0);
 
   const load = useCallback(async () => {
@@ -34,10 +36,11 @@ export function Board({ projectId }: Props) {
       const result = await listTasks(projectId, statuses, priorities);
       if (request === latest.current) {
         setTasks(result);
+        setError(null);
       }
     } catch (failure) {
       if (request === latest.current && !(failure instanceof ApiError && failure.status === 401)) {
-        setError(failure instanceof Error ? failure.message : String(failure));
+        setError(messageOf(failure));
       }
     }
   }, [projectId, statuses, priorities]);
@@ -56,16 +59,8 @@ export function Board({ projectId }: Props) {
     if (status === task.status) {
       return;
     }
-    setError(null);
-    try {
-      await updateTask(projectId, task.id, { status });
-    } catch (failure) {
-      if (failure instanceof ApiError && failure.status === 401) {
-        return;
-      }
-      setError(failure instanceof Error ? failure.message : String(failure));   // e.g. "Task not found."
-    }
-    await load();
+    await moving.run(() => updateTask(projectId, task.id, { status }).then(() => undefined));
+    await load();   // also after a refusal such as "Task not found.", so the board shows what is really there
   }
 
   function drop(event: DragEvent, status: Status) {
@@ -80,36 +75,41 @@ export function Board({ projectId }: Props) {
   const columns = statuses.length > 0 ? STATUSES.filter((status) => statuses.includes(status)) : STATUSES;
 
   return (
-    <section aria-label="Board">
-      {error && <p role="alert">{error}</p>}
-
-      {creating ? (
-        <TaskForm submitLabel="Create task" onSubmit={create} onCancel={() => setCreating(false)} />
-      ) : (
-        <button type="button" onClick={() => setCreating(true)}>New task</button>
+    <section className="panel" aria-label="Board">
+      {!creating && (
+        <div className="actions">
+          <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>New task</button>
+        </div>
       )}
 
-      <fieldset>
-        <legend>Status</legend>
-        {STATUSES.map((status) => (
-          <label key={status}>
-            <input type="checkbox" checked={statuses.includes(status)}
-              onChange={() => setStatuses(toggle(statuses, status))} /> {STATUS_LABEL[status]}{" "}
-          </label>
-        ))}
-      </fieldset>
-      <fieldset>
-        <legend>Priority</legend>
-        {PRIORITIES.map((priority) => (
-          <label key={priority}>
-            <input type="checkbox" checked={priorities.includes(priority)}
-              onChange={() => setPriorities(toggle(priorities, priority))} /> {PRIORITY_LABEL[priority]}{" "}
-          </label>
-        ))}
-      </fieldset>
-      {filtering && (
-        <button type="button" onClick={() => { setStatuses([]); setPriorities([]); }}>Clear filters</button>
-      )}
+      {creating && <TaskForm title="New task" submitLabel="Create task" onSubmit={create} onCancel={() => setCreating(false)} />}
+
+      <div className="filters">
+        <fieldset>
+          <legend className="label">Status</legend>
+          {STATUSES.map((status) => (
+            <label key={status} className="chip">
+              <input type="checkbox" checked={statuses.includes(status)}
+                onChange={() => setStatuses(toggle(statuses, status))} /> {STATUS_LABEL[status]}
+            </label>
+          ))}
+        </fieldset>
+        <fieldset>
+          <legend className="label">Priority</legend>
+          {PRIORITIES.map((priority) => (
+            <label key={priority} className="chip">
+              <input type="checkbox" checked={priorities.includes(priority)}
+                onChange={() => setPriorities(toggle(priorities, priority))} /> {PRIORITY_LABEL[priority]}
+            </label>
+          ))}
+        </fieldset>
+        {filtering && (
+          <button type="button" className="btn btn-quiet btn-small"
+            onClick={() => { setStatuses([]); setPriorities([]); }}>Clear filters</button>
+        )}
+      </div>
+
+      <ErrorMessage message={error ?? moving.error} />
 
       {deleting && (
         <ConfirmDelete message={deleteTaskMessage(deleting.title)} confirmLabel="Delete task"
@@ -118,34 +118,42 @@ export function Board({ projectId }: Props) {
           onCancel={() => setDeleting(null)} />
       )}
 
-      {tasks && tasks.length === 0 && <p>{filtering ? "No tasks match the filters." : "No tasks yet."}</p>}
+      {!tasks && !error && <Loading />}
+      {tasks && tasks.length === 0 && <Empty>{filtering ? "No tasks match the filters." : "No tasks yet."}</Empty>}
 
       {tasks && (
-        <div className="columns">
+        <div className="board" style={{ ["--cols" as string]: columns.length }}>
           {columns.map((status) => {
             const inColumn = tasks.filter((task) => task.status === status);
+            const index = STATUSES.indexOf(status);
+            const previous = STATUSES[index - 1];
+            const next = STATUSES[index + 1];
             return (
-              <section key={status} aria-label={STATUS_LABEL[status]}
+              <section key={status} className={`column column-${statusClass(status)}`} aria-label={STATUS_LABEL[status]}
                 onDragOver={(event) => event.preventDefault()} onDrop={(event) => drop(event, status)}>
-                <h2>{STATUS_LABEL[status]} {inColumn.length}</h2>
+                <h2>{STATUS_LABEL[status]} <span className="count">{inColumn.length}</span></h2>
                 <ul>
                   {inColumn.map((task) => (
-                    <li key={task.id} draggable
+                    <li key={task.id} className="card" draggable
                       onDragStart={(event) => event.dataTransfer.setData("text/plain", task.id)}>
-                      <a href={taskAddress(projectId, task.id)}>{task.title}</a>{" "}
-                      <span>{PRIORITY_LABEL[task.priority]}</span>{" "}
-                      <span>Unassigned</span>{" "}
-                      <span>{task.dueDate ? `Due ${task.dueDate}` : "No due date"}</span>{" "}
-                      {STATUSES.indexOf(status) > 0 && (
-                        <button type="button" aria-label={`Move to ${STATUS_LABEL[STATUSES[STATUSES.indexOf(status) - 1]]}`}
-                          onClick={() => move(task, STATUSES[STATUSES.indexOf(status) - 1])}>←</button>
-                      )}
-                      {STATUSES.indexOf(status) < STATUSES.length - 1 && (
-                        <button type="button" aria-label={`Move to ${STATUS_LABEL[STATUSES[STATUSES.indexOf(status) + 1]]}`}
-                          onClick={() => move(task, STATUSES[STATUSES.indexOf(status) + 1])}>→</button>
-                      )}{" "}
-                      <button type="button" aria-label={`Delete task ${task.title}`}
-                        onClick={() => setDeleting(task)}>Delete</button>
+                      <a className="card-title" href={taskAddress(projectId, task.id)}>{task.title}</a>
+                      <span>{assigneesText(task.assignees)}</span>
+                      <div className="card-meta">
+                        <PriorityPill priority={task.priority} />
+                        <span>{task.dueDate ? `Due ${task.dueDate}` : "No due date"}</span>
+                      </div>
+                      <div className="card-actions">
+                        {previous && (
+                          <button type="button" className="btn btn-small" aria-label={`Move to ${STATUS_LABEL[previous]}`}
+                            disabled={moving.busy} onClick={() => move(task, previous)}>←</button>
+                        )}
+                        {next && (
+                          <button type="button" className="btn btn-small" aria-label={`Move to ${STATUS_LABEL[next]}`}
+                            disabled={moving.busy} onClick={() => move(task, next)}>→</button>
+                        )}
+                        <button type="button" className="btn btn-quiet btn-small push" aria-label={`Delete task ${task.title}`}
+                          onClick={() => setDeleting(task)}>Delete</button>
+                      </div>
                     </li>
                   ))}
                 </ul>

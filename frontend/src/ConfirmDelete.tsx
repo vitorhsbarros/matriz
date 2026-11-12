@@ -1,42 +1,36 @@
-import { useState } from "react";
-import { ApiError } from "./api";
+import { ErrorMessage, useAction } from "./ui";
 
 type Props = {
   /** The exact confirmation text of the story, e.g. `Delete "Website" and all its tasks? This can't be undone.` */
   message: string;
-  /** The confirming choice, e.g. "Delete project" or "Delete task". */
+  /** The confirming choice, e.g. "Delete project", "Delete task", "Delete team" or "Delete comment". */
   confirmLabel: string;
   onConfirm: () => Promise<void>;
   onDeleted: () => void;
   onCancel: () => void;
 };
 
-// NFR05 (US15 AC01–AC03, US16 AC01–AC03): nothing is deleted until the user confirms.
+// NFR05 (US15, US16, US18, US22): nothing is deleted until the user confirms. The confirming button can't send
+// the request twice, and a refusal ("Task not found.", "Only the author can change this comment.") is shown here.
 export function ConfirmDelete({ message, confirmLabel, onConfirm, onDeleted, onCancel }: Props) {
-  const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
+  const action = useAction();
 
   async function confirm() {
-    setSending(true);
-    setError(null);
-    try {
-      await onConfirm();
+    if (await action.run(onConfirm)) {
       onDeleted();
-    } catch (failure) {
-      if (failure instanceof ApiError && failure.status === 401) {
-        return;
-      }
-      setError(failure instanceof Error ? failure.message : String(failure));   // e.g. "Task not found."
-      setSending(false);
     }
   }
 
   return (
-    <div role="dialog" aria-label="Confirm deletion">
+    <div className="confirm" role="dialog" aria-label="Confirm deletion">
       <p>{message}</p>
-      {error && <p role="alert">{error}</p>}
-      <button type="button" onClick={confirm} disabled={sending}>{confirmLabel}</button>{" "}
-      <button type="button" onClick={onCancel}>Cancel</button>
+      <ErrorMessage message={action.error} />
+      <div className="actions">
+        <button type="button" className="btn btn-primary" onClick={confirm} disabled={action.busy}>
+          {confirmLabel}
+        </button>
+        <button type="button" className="btn" onClick={onCancel}>Cancel</button>
+      </div>
     </div>
   );
 }
@@ -46,3 +40,10 @@ export const deleteProjectMessage = (name: string) => `Delete "${name}" and all 
 
 /** US16's confirmation text. */
 export const deleteTaskMessage = (title: string) => `Delete "${title}"? This can't be undone.`;
+
+/** US18's confirmation text. */
+export const deleteTeamMessage = (name: string) =>
+  `Delete the team "${name}"? It will be removed from its tasks. This can't be undone.`;
+
+/** US22's confirmation text. */
+export const DELETE_COMMENT_MESSAGE = "Delete this comment? This can't be undone.";

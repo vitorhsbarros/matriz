@@ -18,13 +18,14 @@ test("shows my projects with my role, their counts and the totals (US04 AC01, AC
   fakeApi({ "GET /api/projects": [both] });
   render(<Dashboard />);
 
-  const items = within(await screen.findByRole("list", { name: "Projects" })).getAllByRole("listitem");
-  expect(items.map((item) => item.textContent)).toEqual([
-    "App Member To do 4 · In progress 1 · Done 7 ",
-    "Website Manager To do 3 · In progress 2 · Done 5 Delete",
+  const table = await screen.findByRole("table", { name: "Projects" });
+  const rows = within(table).getAllByRole("row").slice(1);
+  expect(rows.map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent))).toEqual([
+    ["App", "Member", "4", "1", "7", ""],
+    ["Website", "Manager", "3", "2", "5", "Delete"],
   ]);
   expect(screen.getByText("All my projects").parentElement!.textContent)
-    .toBe("All my projects To do 7 · In progress 3 · Done 12");
+    .toBe("All my projects To do 7 In progress 3 Done 12");
   expect(screen.getByRole("link", { name: "Website" }).getAttribute("href")).toBe("#/projects/p-website");
 });
 

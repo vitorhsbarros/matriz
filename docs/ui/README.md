@@ -91,7 +91,26 @@ The project's tasks are shown as a **board** with one column per status: **To do
 
 ## Out of the wireframe
 
-- **Other MVP screens:** log-in (US02), project members (US09), teams (US11, US12, US17, US18), editing a task's title, description and due date (US08) and editing a project (US14). They have no screen here, because the scope was these three screens.
+- **Other MVP screens:** log-in (US02), project members (US09), teams (US11, US12, US17, US18), editing a task's title, description and due date (US08) and editing a project (US14). They have no screen here, because the scope was these three screens. The browser application builds them with the same patterns (see below).
 - **Server checks:** the wireframe doesn't run validations that depend on the server, such as membership rules (US10 AC04, US13 AC04), due dates in the past (US05 AC04) and the author check on comments (US22 AC05).
 - **Optional extensions:** sign-up (US01) and password recovery (F08) are not in the MVP.
 - **Excluded features:** charts and reports, excluded by C02. The dashboard shows plain counts only.
+
+## Visual system of the browser application
+
+The browser application follows the wireframe's screens and navigation, with a visual system of its own instead of the wireframe's greyscale. It was made for the [front-end prompt](../prompts/frontend.md), with the user's approval on 2026-11-11.
+
+- **Inspiration:** the visual language of 1980s personal-computer print advertising (the user's reference: a collection of Apple's ads of the 1970s and 1980s). Large, tightly set serif headlines in sentence case; small serif body copy; warm paper and ink; the platinum beige of the machines; six saturated colours used only as small accents; lots of white space. Nothing is copied from the ads, and no Apple name, logo, apple shape or six-colour stripe is used.
+- **Fonts**, served with the application (no external requests, PRI02), SIL Open Font License: **EB Garamond** for headings, names and empty states; **IBM Plex Sans** for the interface; **IBM Plex Mono** for counts. Files and licences in `frontend/src/assets/fonts/`.
+- **Colours:** paper `#f3eee3`, surface `#fbf8f1`, ink `#1d1b18`, muted `#5c574e` and platinum `#e4dccb`, with a dark mode in ink and paper. Light is the default whatever the system's setting; a **Dark mode / Light mode** button in the header and on the log-in screen switches, and the browser remembers the choice. The six accents carry meaning: blue, orange and green for To do, In progress and Done; red, ochre and purple for High, Medium and Low. Every text colour meets WCAG AA (4.5 : 1) in both modes; the ratios are noted in `frontend/src/styles/tokens.css`, where every token is defined once.
+- **Logo:** original. Three equal, rounded strokes at 45 degrees, rising from left to right like "///", in the status colours: blue (To do), orange (In progress) and green (Done). Next to it, the word "matriz" in EB Garamond. It is also the favicon. (Chosen by the user on 2026-11-12, after several rounds: a grid of squares, a "#", a slanted grid, a lattice, a gem and cubes.)
+- **Components:** page shell (logo, *My projects*, *Teams*, the user and *Log out*), breadcrumbs, buttons, labelled fields, panels, tables, pills (role, status, priority), the confirmation box and the loading, empty and error states, in `frontend/src/styles/components.css` and `frontend/src/ui.tsx`.
+
+| Screen | Address | Stories |
+|---|---|---|
+| Log-in | (no session) | US02, US19 |
+| My projects (home dashboard) | `#` | US03, US04, US15, US23 |
+| Project: **Board** tab | `#/projects/<id>` | US05–US07, US14–US16, US24 |
+| Project: **Members** tab | `#/projects/<id>/members` | US09 |
+| Task details, with assignees and comments | `#/projects/<id>/tasks/<id>` | US07, US08, US10, US13, US16, US20–US22 |
+| Teams | `#/teams` | US11–US13, US17, US18 |

@@ -2,19 +2,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, createProject, deleteProject, getDashboard, ProjectDashboard, ProjectSummary, TaskCounts } from "./api";
 import { ConfirmDelete, deleteProjectMessage } from "./ConfirmDelete";
 import { ProjectForm } from "./ProjectForm";
+import { Empty, ErrorMessage, Loading, messageOf, RolePill } from "./ui";
 
 export const ROLE_LABEL = { MANAGER: "Manager", MEMBER: "Member" } as const;
 
 function Counts({ counts }: { counts: TaskCounts }) {
   return (
-    <span>
-      To do {counts.toDo} · In progress {counts.inProgress} · Done {counts.done}
+    <span className="totals">
+      <span className="pill-todo count-dot">To do <span className="count">{counts.toDo}</span></span>{" "}
+      <span className="pill-progress count-dot">In progress <span className="count">{counts.inProgress}</span></span>{" "}
+      <span className="pill-done count-dot">Done <span className="count">{counts.done}</span></span>
     </span>
   );
 }
 
-// Home dashboard (US04, US23; wireframe screen 1): the user's projects with their role and task counts, the
-// totals, the search, New project (US03) and Delete for the projects the user manages (US15).
+// Home dashboard (US04, US23; wireframe screen 1): the user's projects with their role and task counts, the totals
+// over every project whatever the search (D14), the search, New project (US03) and Delete for the projects the
+// user manages (US15). After a change the list is read again from the API, so names and counts are the server's.
 export function Dashboard() {
   const [search, setSearch] = useState("");
   const [dashboard, setDashboard] = useState<ProjectDashboard | null>(null);
@@ -33,7 +37,7 @@ export function Dashboard() {
       }
     } catch (failure) {
       if (request === latest.current && !(failure instanceof ApiError && failure.status === 401)) {
-        setError(failure instanceof Error ? failure.message : String(failure));
+        setError(messageOf(failure));
       }
     }
   }, []);
@@ -52,20 +56,23 @@ export function Dashboard() {
   const empty = dashboard !== null && dashboard.projects.length === 0;
 
   return (
-    <main>
-      <h1>My projects</h1>
-      {error && <p role="alert">{error}</p>}
+    <>
+      <div className="page-head">
+        <div>
+          <h1>My projects</h1>
+          <p className="lede">Everything you're working on, and where it stands.</p>
+        </div>
+        {!creating && (
+          <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>New project</button>
+        )}
+      </div>
 
-      {creating ? (
-        <ProjectForm submitLabel="Create project" onSubmit={create} onCancel={() => setCreating(false)} />
-      ) : (
-        <button type="button" onClick={() => setCreating(true)}>New project</button>
+      {creating && (
+        <ProjectForm title="New project" submitLabel="Create project" onSubmit={create}
+          onCancel={() => setCreating(false)} />
       )}
 
-      <p>
-        <label htmlFor="search">Search projects</label>{" "}
-        <input id="search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} />
-      </p>
+      <ErrorMessage message={error} />
 
       {deleting && (
         <ConfirmDelete message={deleteProjectMessage(deleting.name)} confirmLabel="Delete project"
@@ -74,29 +81,57 @@ export function Dashboard() {
           onCancel={() => setDeleting(null)} />
       )}
 
-      {dashboard && empty && !searching && <p>You are not a member of any project yet.</p>}
+      {!dashboard && !error && <Loading />}
+      {dashboard && empty && !searching && <Empty>You are not a member of any project yet.</Empty>}
       {dashboard && !(empty && !searching) && (
         <>
-          <p><strong>All my projects</strong> <Counts counts={dashboard.totals} /></p>
+          <div className="panel">
+            <p className="totals"><strong>All my projects</strong> <Counts counts={dashboard.totals} /></p>
+          </div>
+          <div className="inline-form">
+            <div className="field">
+              <label htmlFor="search">Search projects</label>
+              <input id="search" className="input" type="search" placeholder="Project name" value={search}
+                onChange={(event) => setSearch(event.target.value)} />
+            </div>
+          </div>
           {empty ? (
-            <p>No projects match your search.</p>
+            <Empty>No projects match your search.</Empty>
           ) : (
-            <ul aria-label="Projects">
-              {dashboard.projects.map((project) => (
-                <li key={project.id}>
-                  <a href={`#/projects/${project.id}`}>{project.name}</a>{" "}
-                  <span>{ROLE_LABEL[project.role]}</span>{" "}
-                  <Counts counts={project.taskCounts} />{" "}
-                  {project.role === "MANAGER" && (
-                    <button type="button" aria-label={`Delete ${project.name}`}
-                      onClick={() => setDeleting(project)}>Delete</button>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <div className="table-wrap">
+              <table className="table" aria-label="Projects">
+                <thead>
+                  <tr>
+                    <th scope="col">Project</th>
+                    <th scope="col">My role</th>
+                    <th scope="col" className="num">To do</th>
+                    <th scope="col" className="num">In progress</th>
+                    <th scope="col" className="num">Done</th>
+                    <th scope="col"><span className="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboard.projects.map((project) => (
+                    <tr key={project.id}>
+                      <td className="name"><a href={`#/projects/${project.id}`}>{project.name}</a></td>
+                      <td><RolePill role={project.role} /></td>
+                      <td className="num">{project.taskCounts.toDo}</td>
+                      <td className="num">{project.taskCounts.inProgress}</td>
+                      <td className="num">{project.taskCounts.done}</td>
+                      <td>
+                        {project.role === "MANAGER" && (
+                          <button type="button" className="btn btn-quiet btn-small" aria-label={`Delete ${project.name}`}
+                            onClick={() => setDeleting(project)}>Delete</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}
-    </main>
+    </>
   );
 }

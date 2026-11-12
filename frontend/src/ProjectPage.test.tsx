@@ -15,7 +15,7 @@ afterEach(() => {
 test("the manager sees the project with Edit and Delete project", async () => {
   fakeApi({ "GET /api/projects/p-website": [{ status: 200, body: website }],
     "GET /api/projects/p-website/tasks": [noTasks] });
-  render(<ProjectPage projectId="p-website" onLeave={() => {}} />);
+  render(<ProjectPage projectId="p-website" tab="board" onLeave={() => {}} />);
 
   expect(await screen.findByRole("heading", { name: "Website" })).toBeDefined();
   expect(screen.getByText("Manager")).toBeDefined();
@@ -27,7 +27,7 @@ test("the manager sees the project with Edit and Delete project", async () => {
 test("a member sees neither Edit nor Delete project (US14 AC04, US15 AC04)", async () => {
   fakeApi({ "GET /api/projects/p-website": [{ status: 200, body: { ...website, role: "MEMBER" } }],
     "GET /api/projects/p-website/tasks": [noTasks] });
-  render(<ProjectPage projectId="p-website" onLeave={() => {}} />);
+  render(<ProjectPage projectId="p-website" tab="board" onLeave={() => {}} />);
 
   expect(await screen.findByText("Member")).toBeDefined();
   expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
@@ -36,7 +36,7 @@ test("a member sees neither Edit nor Delete project (US14 AC04, US15 AC04)", asy
 
 test("a project the user can't access shows the API's message (DoD03)", async () => {
   fakeApi({ "GET /api/projects/p-shop": [{ status: 404, body: { status: 404, detail: "Project not found." } }] });
-  render(<ProjectPage projectId="p-shop" onLeave={() => {}} />);
+  render(<ProjectPage projectId="p-shop" tab="board" onLeave={() => {}} />);
 
   expect((await screen.findByRole("alert")).textContent).toBe("Project not found.");
 });
@@ -50,7 +50,7 @@ test("editing saves both fields and shows the API's message on failure (US14)", 
       { status: 200, body: { ...website, name: "Company website", description: null } },
     ],
   });
-  render(<ProjectPage projectId="p-website" onLeave={() => {}} />);
+  render(<ProjectPage projectId="p-website" tab="board" onLeave={() => {}} />);
   fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
   expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Website");
 
@@ -73,7 +73,7 @@ test("deleting asks for confirmation, then leaves the project (US15 AC01, AC02)"
     "DELETE /api/projects/p-website": [{ status: 204 }],
   });
   const onLeave = vi.fn();
-  render(<ProjectPage projectId="p-website" onLeave={onLeave} />);
+  render(<ProjectPage projectId="p-website" tab="board" onLeave={onLeave} />);
 
   fireEvent.click(await screen.findByRole("button", { name: "Delete project" }));
   const dialog = screen.getByRole("dialog", { name: "Confirm deletion" });

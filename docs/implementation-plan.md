@@ -1,6 +1,6 @@
 # Matriz — Implementation plan (MVP)
 
-- **Status:** in progress. I0 to I3 are done, and the back end of I4 to I6 (2026-11-11); the browser application of I4 to I6 is next. The increments and their status are in section 5; update the **Status** column as the work progresses.
+- **Status:** every increment, I0 to I6, is done (2026-11-11): the 23 MVP stories can be used through the browser application. The increments and their status are in section 5; update the **Status** column as the work progresses.
 - **Scope:** the 23 MVP user stories in [user-stories.md](user-stories.md), after the [scope reconciliation](reviews/scope-reconciliation.md).
 - **Prompt:** [docs/prompts/implementation-plan.md](prompts/implementation-plan.md).
 
@@ -176,9 +176,9 @@ Seven increments, in about 15 working days (ASM08). Each one ends with a working
 | I1 | Access: demo accounts, log-in and log-out | US19, US02 | I0 | 1.5 | Done |
 | I2 | Project management: create, home dashboard, search, edit, delete | US03, US04, US23, US14, US15 | I1 | 3 | Done |
 | I3 | Tasks: board, create, status, edit, details, delete, filters | US05, US06, US07, US08, US20, US16, US24 | I2 | 3.5 | Done |
-| I4 | Project members and assigning people | US09, US10 | I3 | 2 | Back end done |
-| I5 | Teams and assigning teams | US11, US12, US13, US17, US18 | I4 | 2.5 | Back end done |
-| I6 | Comments | US21, US22 | I3 | 1.5 | Back end done |
+| I4 | Project members and assigning people | US09, US10 | I3 | 2 | Done |
+| I5 | Teams and assigning teams | US11, US12, US13, US17, US18 | I4 | 2.5 | Done |
+| I6 | Comments | US21, US22 | I3 | 1.5 | Done |
 | | **Total** | **23 stories** | | **15** | |
 
 **Order changed on 2026-11-11** (user's decision, [docs/prompts/project-management.md](prompts/project-management.md)): the whole project management comes first, as the first complete path between the interface, the API and the database. US14 and US15 moved from the old I6, US23 from the old I8, and US05 and US06 moved from I2 to I3. The later increments were renumbered (old I3–I5 are now I4–I6). The total stays 15 days.
@@ -354,9 +354,28 @@ Done together, at the user's request, without the browser application, which com
 | Decisions | PD05 (lock the membership row) and PD11 (everyone sees teams), both decided by the user; recorded in constraints.md, architecture.md, 04-solution-architecture.md and database.md (OP3). New assumptions AS21–AS23 in api-contract.md. |
 | Checks | `./mvnw verify`: 170 back-end tests (`MembersApiTest` 14, `TeamsApiTest` 14, `AssigneesApiTest` 13, `CommentsApiTest` 13, and the earlier 116) pass, with `ModularityTest`. The PD05 test was checked to fail when the lock is removed. |
 
-**Left for later:**
-- **The browser application** of I4 to I6: the members and teams screens, the assignees and the comments on the task details. Until then the board and the details still show "Unassigned", although the API returns the real assignees.
-- No manual check in the browser, because there is no interface for these operations yet.
+**Left for later** (done in the next step, below): the browser application of I4 to I6.
+
+### Browser application of I4 to I6, and the visual system — done on 2026-11-11
+
+The prompt is in [docs/prompts/frontend.md](prompts/frontend.md). Every MVP story can now be used through the browser application, with the visual system described in [docs/ui/README.md](ui/README.md#visual-system-of-the-browser-application).
+
+| Item | Result |
+|---|---|
+| Visual system | Design tokens (`styles/tokens.css`) for light and dark mode, with WCAG AA text contrast; EB Garamond and IBM Plex served with the application (OFL; no external requests); an original logo and favicon; shared components and styles (`ui.tsx`, `styles/components.css`). |
+| New screens | The project's **Members** tab (US09), the **Teams** screen (US11, US12, US17, US18), and on the task details the **assignees** (US10, US13) and **comments** (US21, US22). The board's cards show the real assignees. |
+| Existing screens | Log-in, dashboard, project, board and task details restyled and given breadcrumbs, the page shell and the shared states. |
+| API client | One place for the back-end address (`src/config.ts`, default `/api`, `VITE_API_BASE` at build time) and typed calls for every operation of the contract. |
+| States | Every screen shows loading, empty, success and error; a failed submission keeps what was typed; `useAction` stops a second request while one is in progress; after every change the affected lists and counts are read again from the API. |
+| Checks | `npm test`: 44 front-end tests (16 new, among them double clicks, kept input and role-dependent actions). `./mvnw verify`: 170 back-end tests and the front-end tests pass, with `ModularityTest`. End to end in Chromium against the real API and database, as Ana, Rui and Sara: every story's main path, including a back-end restart; screenshots of the six screens at 1280 and 390 px in light and dark mode, without horizontal scrolling; no request to any other host; log-in and moving a task done with the keyboard only. |
+
+**Differences from the plan above:**
+- **Members are a tab of the project** (`#/projects/<id>/members`), and **teams have their own screen** (`#/teams`), reached from the header.
+- **Interface text that no story defines** was kept to the minimum and is listed in the report of this step: a tagline on the log-in screen, the dashboard's and teams' subtitles, "Loading…", "No teams yet.", "Choose a person or a team", and one generic message when the server can't be reached or fails without a message ("The request could not be completed. Please try again.").
+- **The comment dates** are shown as `YYYY-MM-DD HH:mm` in the browser's local time (US21 AC01).
+- **Teams that can't be assigned** (not all their members are in the project, US13 AC04) are listed disabled in the assignee selector, marked "(not all members are in the project)", with the story's message "All team members must belong to the project." below it, so a team never just goes missing (user's choice, 2026-11-11). Assigning people or teams while creating a task was considered and left out, as US05 says a new task starts unassigned (user's choice).
+- **Theme and logo** (user's requests, 2026-11-11): light is the default whatever the system's setting, with a Dark mode / Light mode button; the logo is three equal strokes at 45 degrees in the status colours, and the theme button shows a moon or a sun icon.
+- **Safari:** the session cookie's `Secure` flag can be turned off for `http://localhost` with `MATRIZ_COOKIE_SECURE=false` (user's approval), because Safari keeps no `Secure` cookie there; it stays on by default and on any server (SEC06, SEC08).
 
 ## 6. Operations per increment
 

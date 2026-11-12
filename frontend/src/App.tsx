@@ -1,33 +1,41 @@
 import { useEffect, useState } from "react";
-import { ApiError, currentSession, logOut, Session, whenLoggedOut } from "./api";
+import { currentSession, logOut, Session, whenLoggedOut } from "./api";
 import { Dashboard } from "./Dashboard";
 import { LogInPage } from "./LogInPage";
+import { Logo } from "./Logo";
 import { ProjectPage } from "./ProjectPage";
 import { TaskPage } from "./TaskPage";
+import { TeamsPage } from "./TeamsPage";
+import { ErrorMessage, Loading, ThemeToggle, useAction } from "./ui";
 
 const PLEASE_LOG_IN = "Please log in to continue.";
 
 type State =
   | { screen: "loading" }
   | { screen: "logIn"; notice: string | null }
-  | { screen: "app"; session: Session; error: string | null };
+  | { screen: "app"; session: Session };
 
-type Place = { projectId: string | null; taskId: string | null };
+/** Where the user is, kept in the address after "#", so a reload stays there. */
+export type Place =
+  | { page: "home" }
+  | { page: "teams" }
+  | { page: "project"; projectId: string; tab: "board" | "members" }
+  | { page: "task"; projectId: string; taskId: string };
 
-/**
- * The screen is kept in the address (#/projects/<id> or #/projects/<id>/tasks/<id>), so a reload stays where
- * the user was.
- */
-function placeInAddress(): Place {
-  const match = /^#\/projects\/([^/]+)(?:\/tasks\/([^/]+))?$/.exec(window.location.hash);
-  return {
-    projectId: match ? decodeURIComponent(match[1]) : null,
-    taskId: match && match[2] ? decodeURIComponent(match[2]) : null,
-  };
+export function placeInAddress(hash = window.location.hash): Place {
+  const task = /^#\/projects\/([^/]+)\/tasks\/([^/]+)$/.exec(hash);
+  if (task) {
+    return { page: "task", projectId: decodeURIComponent(task[1]), taskId: decodeURIComponent(task[2]) };
+  }
+  const project = /^#\/projects\/([^/]+)(\/members)?$/.exec(hash);
+  if (project) {
+    return { page: "project", projectId: decodeURIComponent(project[1]), tab: project[2] ? "members" : "board" };
+  }
+  return hash === "#/teams" ? { page: "teams" } : { page: "home" };
 }
 
-function usePlaceInAddress() {
-  const [place, setPlace] = useState(placeInAddress);
+function usePlace() {
+  const [place, setPlace] = useState(() => placeInAddress());
   useEffect(() => {
     const update = () => setPlace(placeInAddress());
     window.addEventListener("hashchange", update);
@@ -36,66 +44,73 @@ function usePlaceInAddress() {
   return place;
 }
 
-function goToDashboard() {
-  // Clears the address without a reload; hashchange then shows the dashboard.
-  window.location.hash = "";
+export function go(address: string) {
+  // Changes the address without a reload; "hashchange" then shows the screen.
+  window.location.hash = address;
 }
 
-// The log-in screen (US02), and once logged in: the header with who is logged in and "Log out", the home
-// dashboard (US04), a project with its board (US04 AC02, US06) and a task (US20). All interface text is in
-// English (C05, DoD01).
+// The log-in screen (US02) and, once logged in, the page shell: the logo, the navigation (My projects, Teams),
+// who is logged in and Log out (US02 AC10), around the current screen. All interface text is in English
+// (C05, DoD01).
 export function App() {
   const [state, setState] = useState<State>({ screen: "loading" });
-  const { projectId, taskId } = usePlaceInAddress();
+  const place = usePlace();
+  const logOutAction = useAction();
 
   useEffect(() => {
     // Whenever the API says the session ended (log-out elsewhere, expiry), go back to log-in.
     whenLoggedOut(() => setState({ screen: "logIn", notice: PLEASE_LOG_IN }));
     currentSession()
-      .then((session) =>
-        setState(session
-          ? { screen: "app", session, error: null }
-          : { screen: "logIn", notice: PLEASE_LOG_IN }))
+      .then((session) => setState(session ? { screen: "app", session } : { screen: "logIn", notice: PLEASE_LOG_IN }))
       .catch(() => setState({ screen: "logIn", notice: null }));
   }, []);
 
-  async function handleLogOut(session: Session) {
-    try {
-      await logOut();
-      goToDashboard();
+  async function handleLogOut() {
+    if (await logOutAction.run(logOut)) {
+      go("");
       setState({ screen: "logIn", notice: null });
-    } catch (error) {
-      if (!(error instanceof ApiError && error.status === 401)) {
-        setState({ screen: "app", session, error: error instanceof Error ? error.message : String(error) });
-      }
     }
   }
 
-  switch (state.screen) {
-    case "loading":
-      return null;
-    case "logIn":
-      return (
-        <LogInPage notice={state.notice}
-          onLoggedIn={(session) => setState({ screen: "app", session, error: null })} />
-      );
-    case "app":
-      return (
-        <>
-          <header>
-            <strong>Matriz</strong> <span>{state.session.user.name}</span>{" "}
-            <button type="button" onClick={() => handleLogOut(state.session)}>Log out</button>
-          </header>
-          {state.error && <p role="alert">{state.error}</p>}
-          {projectId && taskId ? (
-            <TaskPage projectId={projectId} taskId={taskId}
-              onLeave={() => { window.location.hash = `#/projects/${projectId}`; }} />
-          ) : projectId ? (
-            <ProjectPage projectId={projectId} onLeave={goToDashboard} />
-          ) : (
-            <Dashboard />
-          )}
-        </>
-      );
+  if (state.screen === "loading") {
+    return <main className="page"><Loading /></main>;
   }
+  if (state.screen === "logIn") {
+    return <LogInPage notice={state.notice} onLoggedIn={(session) => setState({ screen: "app", session })} />;
+  }
+
+  const me = state.session.user;
+  return (
+    <>
+      <header className="shell-header">
+        <div className="shell-bar">
+          <Logo href="#" />
+          <nav className="shell-nav" aria-label="Main">
+            <a href="#" aria-current={place.page === "home" ? "page" : undefined}>My projects</a>
+            <a href="#/teams" aria-current={place.page === "teams" ? "page" : undefined}>Teams</a>
+          </nav>
+          <div className="shell-user">
+            <ThemeToggle />
+            <span>{me.name}</span>
+            <button type="button" className="btn btn-small" onClick={handleLogOut} disabled={logOutAction.busy}>
+              Log out
+            </button>
+          </div>
+        </div>
+      </header>
+      <main className="page">
+        <ErrorMessage message={logOutAction.error} />
+        {place.page === "task" ? (
+          <TaskPage key={place.taskId} projectId={place.projectId} taskId={place.taskId} me={me}
+            onLeave={() => go(`#/projects/${place.projectId}`)} />
+        ) : place.page === "project" ? (
+          <ProjectPage key={place.projectId} projectId={place.projectId} tab={place.tab} onLeave={() => go("")} />
+        ) : place.page === "teams" ? (
+          <TeamsPage me={me} />
+        ) : (
+          <Dashboard />
+        )}
+      </main>
+    </>
+  );
 }

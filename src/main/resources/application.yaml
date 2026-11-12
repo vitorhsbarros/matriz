@@ -35,7 +35,9 @@ server:
       cookie:
         name: MATRIZ_SESSION
         http-only: true
-        secure: true
+        # Secure by default (SEC06, SEC08). Safari keeps no Secure cookie on http://localhost, so a local
+        # .env may set MATRIZ_COOKIE_SECURE=false; any server reached over HTTPS keeps it true.
+        secure: ${MATRIZ_COOKIE_SECURE:true}
         same-site: lax
 
 management:

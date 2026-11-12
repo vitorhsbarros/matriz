@@ -1,5 +1,7 @@
 import { FormEvent, useState } from "react";
-import { ApiError, logIn, Session } from "./api";
+import { logIn, Session } from "./api";
+import { Logo } from "./Logo";
+import { ErrorMessage, Field, ThemeToggle, useAction } from "./ui";
 
 type Props = {
   /** Why the log-in screen is shown, e.g. "Please log in to continue." (DoD02). */
@@ -7,46 +9,40 @@ type Props = {
   onLoggedIn: (session: Session) => void;
 };
 
-// US02: log in with email and password. The messages come from the API, word for word (DoD04).
-// The fields aren't marked "required", so the browser doesn't replace the API's message with its own.
+// US02: log in with email and password. The messages come from the API, word for word (DoD04): "Invalid email or
+// password.", "Email and password are required.". The fields aren't marked "required", so the browser doesn't
+// replace the API's message with its own. The typed email stays after a failure.
 export function LogInPage({ notice, onLoggedIn }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
+  const action = useAction({ showUnauthorized: true });
 
-  async function submit(event: FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault();
-    setSending(true);
-    setError(null);
-    try {
-      onLoggedIn(await logIn(email, password));
-    } catch (failure) {
-      setError(failure instanceof ApiError ? failure.message : String(failure));
-      setSending(false);
-    }
+    action.run(async () => onLoggedIn(await logIn(email, password)));
   }
 
-  const message = error ?? notice;
   return (
-    <main>
-      <h1>Matriz</h1>
-      <h2>Log in</h2>
-      {message && <p role="alert">{message}</p>}
-      <form onSubmit={submit} noValidate>
-        <p>
-          <label htmlFor="email">Email</label>
-          <br />
-          <input id="email" type="email" autoComplete="username" value={email}
+    <main className="login">
+      <div className="login-theme"><ThemeToggle /></div>
+      <Logo large />
+      <p className="tagline">Every project. Every task. Everyone in the picture.</p>
+      <div className="status-rule" aria-hidden="true" />
+      <form className="panel form" onSubmit={submit} noValidate aria-label="Log in">
+        <h1>Log in</h1>
+        {notice && !action.error && <p className="notice" role="alert">{notice}</p>}
+        <ErrorMessage message={action.error} />
+        <Field id="email" label="Email">
+          <input id="email" className="input" type="email" autoComplete="username" value={email}
             onChange={(event) => setEmail(event.target.value)} />
-        </p>
-        <p>
-          <label htmlFor="password">Password</label>
-          <br />
-          <input id="password" type="password" autoComplete="current-password" value={password}
+        </Field>
+        <Field id="password" label="Password">
+          <input id="password" className="input" type="password" autoComplete="current-password" value={password}
             onChange={(event) => setPassword(event.target.value)} />
-        </p>
-        <button type="submit" disabled={sending}>Log in</button>
+        </Field>
+        <div className="actions">
+          <button type="submit" className="btn btn-primary" disabled={action.busy}>Log in</button>
+        </div>
       </form>
     </main>
   );

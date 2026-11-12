@@ -24,6 +24,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * real HTTP requests to the running application. The passwords are fictitious and exist only in the tests.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        // As on any server: a developer's .env may turn Secure off for Safari on localhost.
+        "MATRIZ_COOKIE_SECURE=true",
         "matriz.demo.seed=true",
         "matriz.demo.password-ana=test-password-a",
         "matriz.demo.password-rui=test-password-r",

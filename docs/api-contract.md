@@ -223,7 +223,7 @@ The cross-cutting criteria in the [user stories README](user-stories.md) apply t
 
 ## 4. Authentication
 
-- **Session cookie:** log-in sets a session cookie (`MATRIZ_SESSION`) that is `HttpOnly`, `Secure` and `SameSite=Lax`.
+- **Session cookie:** log-in sets a session cookie (`MATRIZ_SESSION`) that is `HttpOnly`, `Secure` and `SameSite=Lax`. `Secure` can be turned off only for a local demonstration on `http://localhost` (`MATRIZ_COOKIE_SECURE=false`), because Safari keeps no `Secure` cookie there; it stays on by default and on any server, which must use HTTPS (SEC08). Decided with the user on 2026-11-11.
 - **Where sessions live:** on the server, in the shared database (the SESSION entity in [database.md](database.md)). So:
   - log-out deletes the session and the cookie stops working immediately (US02 AC02);
   - any application instance can serve any request (ADR-0001).

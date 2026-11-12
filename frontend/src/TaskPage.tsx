@@ -1,21 +1,24 @@
 import { useEffect, useState } from "react";
 import {
-  ApiError, deleteTask, getProject, getTask, PRIORITY_LABEL, Status, STATUS_LABEL, STATUSES, Task, TaskInput,
-  updateTask,
+  ApiError, deleteTask, getProject, getTask, Status, STATUS_LABEL, STATUSES, Task, TaskInput, updateTask, User,
 } from "./api";
+import { Assignees } from "./Assignees";
+import { Comments } from "./Comments";
 import { ConfirmDelete, deleteTaskMessage } from "./ConfirmDelete";
 import { TaskForm } from "./TaskForm";
+import { Crumbs, ErrorMessage, Loading, messageOf, PriorityPill, useAction } from "./ui";
 
-type Props = { projectId: string; taskId: string; onLeave: () => void };
+type Props = { projectId: string; taskId: string; me: User; onLeave: () => void };
 
-// A task's details (US20; wireframe screen 3, without assignees and comments, which arrive with US10, US13 and
-// US21): every field, the status (US07), Edit (US08) and Delete task (US16).
-export function TaskPage({ projectId, taskId, onLeave }: Props) {
+// A task's details (US20; wireframe screen 3): every field, the status (US07), Edit (US08), Delete task (US16),
+// the assignees (US10, US13) and the comments (US21, US22).
+export function TaskPage({ projectId, taskId, me, onLeave }: Props) {
   const [task, setTask] = useState<Task | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const statusChange = useAction();
 
   useEffect(() => {
     let current = true;
@@ -23,7 +26,7 @@ export function TaskPage({ projectId, taskId, onLeave }: Props) {
     setError(null);
     const report = (failure: unknown) => {
       if (current && !(failure instanceof ApiError && failure.status === 401)) {
-        setError(failure instanceof Error ? failure.message : String(failure));   // "Project not found." ...
+        setError(messageOf(failure));   // "Project not found.", "Task not found."
       }
     };
     getProject(projectId).then((project) => current && setProjectName(project.name)).catch(report);
@@ -31,15 +34,8 @@ export function TaskPage({ projectId, taskId, onLeave }: Props) {
     return () => { current = false; };
   }, [projectId, taskId]);
 
-  async function changeStatus(status: Status) {
-    setError(null);
-    try {
-      setTask(await updateTask(projectId, taskId, { status }));
-    } catch (failure) {
-      if (!(failure instanceof ApiError && failure.status === 401)) {
-        setError(failure instanceof Error ? failure.message : String(failure));
-      }
-    }
+  function changeStatus(status: Status) {
+    statusChange.run(async () => setTask(await updateTask(projectId, taskId, { status })));
   }
 
   async function save(input: TaskInput) {
@@ -53,51 +49,55 @@ export function TaskPage({ projectId, taskId, onLeave }: Props) {
   }
 
   return (
-    <main>
-      <p>
-        <a href="#">My projects</a> / <a href={`#/projects/${projectId}`}>{projectName ?? "Project"}</a>
-      </p>
-      {error && <p role="alert">{error}</p>}
+    <>
+      <Crumbs items={[
+        { label: "My projects", href: "#" },
+        { label: projectName ?? "Project", href: `#/projects/${projectId}` },
+        { label: task?.title ?? "Task" },
+      ]} />
+      <ErrorMessage message={error} />
+      {!task && !error && <Loading />}
       {task && (editing ? (
-        <TaskForm submitLabel="Save"
-          initial={{
-            title: task.title,
-            description: task.description ?? "",
-            dueDate: task.dueDate ?? "",
-            priority: task.priority,
-          }}
+        <TaskForm title="Edit task" submitLabel="Save"
+          initial={{ title: task.title, description: task.description ?? "", dueDate: task.dueDate ?? "", priority: task.priority }}
           onSubmit={save} onCancel={() => setEditing(false)} />
       ) : (
         <>
-          <h1>{task.title}</h1>
-          <p>
-            <label htmlFor="task-status">Status</label>{" "}
-            <select id="task-status" value={task.status}
-              onChange={(event) => changeStatus(event.target.value as Status)}>
-              {STATUSES.map((status) => <option key={status} value={status}>{STATUS_LABEL[status]}</option>)}
-            </select>
-          </p>
-          <dl>
-            <dt>Priority</dt>
-            <dd>{PRIORITY_LABEL[task.priority]}</dd>
-            <dt>Due date</dt>
-            <dd>{task.dueDate ?? "No due date"}</dd>
-            <dt>Assignees</dt>
-            <dd>Unassigned</dd>
-            <dt>Description</dt>
-            <dd>{task.description ?? "No description"}</dd>
-          </dl>
-          <p>
-            <button type="button" onClick={() => setEditing(true)}>Edit</button>{" "}
-            <button type="button" onClick={() => setDeleting(true)}>Delete task</button>
-          </p>
+          <div className="page-head">
+            <h1>{task.title}</h1>
+            <div className="actions">
+              <button type="button" className="btn" onClick={() => setEditing(true)}>Edit</button>
+              <button type="button" className="btn btn-danger" onClick={() => setDeleting(true)}>Delete task</button>
+            </div>
+          </div>
           {deleting && (
             <ConfirmDelete message={deleteTaskMessage(task.title)} confirmLabel="Delete task"
-              onConfirm={() => deleteTask(projectId, taskId)} onDeleted={onLeave}
-              onCancel={() => setDeleting(false)} />
+              onConfirm={() => deleteTask(projectId, taskId)} onDeleted={onLeave} onCancel={() => setDeleting(false)} />
           )}
+          <div className="detail">
+            <div className="panel">
+              <dl className="facts">
+                <dt><label htmlFor="task-status">Status</label></dt>
+                <dd>
+                  <select id="task-status" className="input" value={task.status} disabled={statusChange.busy}
+                    onChange={(event) => changeStatus(event.target.value as Status)}>
+                    {STATUSES.map((status) => <option key={status} value={status}>{STATUS_LABEL[status]}</option>)}
+                  </select>
+                </dd>
+                <dt>Priority</dt>
+                <dd><PriorityPill priority={task.priority} /></dd>
+                <dt>Due date</dt>
+                <dd>{task.dueDate ?? "No due date"}</dd>
+                <dt>Description</dt>
+                <dd className="prose">{task.description ?? "No description"}</dd>
+              </dl>
+              <ErrorMessage message={statusChange.error} />
+              <Comments projectId={projectId} taskId={taskId} me={me} />
+            </div>
+            <Assignees projectId={projectId} task={task} onChange={setTask} />
+          </div>
         </>
       ))}
-    </main>
+    </>
   );
 }
