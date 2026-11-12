@@ -208,3 +208,19 @@ The project was built with an AI assistant (Claude Code), with every decision ta
 | **1. Safari log-in** | The developer reported that in Safari the log-in accepted the credentials but didn't go further. The assistant was asked to make it work. It diagnosed that the session cookie is `Secure` (SEC06), and that Safari, unlike Chrome and Firefox, keeps no `Secure` cookie on `http://localhost`. It proposed making the flag configurable, `Secure` by default. | The developer approved changing a security setting, limited to `http://localhost` through `MATRIZ_COOKIE_SECURE=false` in the local `.env`, with the cookie still `Secure` by default and on any HTTPS server. | Reproduced in WebKit, Safari's engine, before the fix: log-in answered `200`, no cookie was kept, and the screen went back to log-in. With the flag off: the cookie was kept and "My projects" opened. `SessionApiTest` keeps testing the `Secure` cookie, and `CookieDefaultsTest` checks the default stays `true`. |
 | **2. Assigning people while creating a task (suggestion rejected)** | The developer asked whether people and teams could be assigned in the **New task** form. The assistant answered that US05 says a new task starts unassigned, and offered three options: assign from the interface right after creating, change the contract, or leave it as it is. It recommended the first. | The developer **rejected** the recommendation and chose to leave it as it is: tasks are created unassigned and assigned in their details, as US05 says. Nothing was changed. | The choice is recorded in implementation-plan.md (I4–I6 browser application, differences). The behaviour is covered by `TasksApiTest.createATaskWithEveryField` (a new task has no assignees) and case 06 of this record. |
 | **3. Assigning a member who is being removed (PD05)** | The developer asked to implement members and assignees. The assistant pointed out the pending decision PD05 (an assignment saved just after the person left the project, US10 AC05) and explained the options. It then wrote a test that forces both operations to run at the same time. | The developer chose to lock the membership row (option a), after asking for an explanation of the problem. | The test `MembersApiTest.anAssignmentAndARemovalAtTheSameTimeLeaveNoAssignmentBehind` passes. To show that it really tests the lock, the `FOR SHARE` was removed for one run: the test then **failed** ("expected: 0 but was: 1", an assignment survived), and passed again once the lock was back. |
+
+## 9. Running from a clean copy
+
+The README's steps were followed word for word in a fresh clone, on 2026-11-12, with a new, empty database (the developer's PostgreSQL was stopped meanwhile, then started again with its data intact).
+
+| Step (README) | Command | Observed |
+|---|---|---|
+| 1. Get the code | `git clone … matriz-clean` | 191 files, at commit `953e8d5` |
+| 2. Configure | `cp .env.example .env` (the example values kept) | Done |
+| 3. Start the database | `docker compose up -d --wait` | A new container and volume, healthy |
+| 4. Build and run the tests | `./mvnw verify` | **BUILD SUCCESS** in 112 s: 179 back-end and 46 browser application tests pass |
+| 5. Start the application | `SERVER_PORT=8081 java -jar target/matriz-0.1.0-SNAPSHOT.jar` (8080 is taken on this machine, as the README allows) | The 6 Flyway migrations created the schema, up to version 4.1; no error in the log |
+| 6. Open it | `/actuator/health`, `/`, log-in as Ana with the example password | `{"status":"UP"}`; the start page; `200` |
+| Demo data | Log in as Rui in the browser | *App* (Manager) and *Website* (Member), created by the seed: [10-clean-copy-dashboard.png](verification/10-clean-copy-dashboard.png) |
+
+Afterwards, the clean copy's container and volume were deleted (`docker compose down -v` in the clone only).
