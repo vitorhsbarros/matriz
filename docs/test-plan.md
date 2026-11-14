@@ -28,7 +28,7 @@ Only the sources of truth were used:
 | [constraints.md](constraints.md) | SEC01, SEC02, SEC03, SEC07 |
 | [ADR-0002](architecture/adr/ADR-0002-session-cookie-authentication.md) | Session and verification (CSRF) token, through SEC07 and DoD06 |
 
-**Not used:** `openapi.yaml`, [api-contract.md](api-contract.md), production code and existing tests. As a result, expected results are stated as the outcome and message the specification gives, not as status codes or paths.
+**Not used:** `openapi.yaml`, [api-contract.md](api-contract.md), production code and existing tests. As a result, expected results are stated as the outcome and message the specification gives, not as status codes or paths. Status codes, paths and field names are left to the integration tests, which take them from the API contract.
 
 ## 3. Scenario matrix
 

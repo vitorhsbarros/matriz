@@ -252,3 +252,43 @@ On 2026-11-14 the rule for a task's title was tested at unit level, from the spe
 **Tests corrected:** one. The first version also treated a title made of a tab (`"\t"`) as missing. It passed, but the specification doesn't support it: D01 speaks of "spaces" and doesn't say whether a tab counts as one. The case was removed instead of being kept as a guess. The question is left open for the specification.
 
 **Defects found:** none. The rule meets US05, D01 and D02 for every value tested, and the rule was not changed.
+
+## 11. Integration tests: creating and reading a task
+
+On 2026-11-14 the API and the real persistence were tested together for creating and reading a task. The tests use real HTTP requests, with a session and verification token, against a PostgreSQL database in a container (`TestcontainersConfiguration`).
+- **Status codes and fields:** from the API contract ([openapi.yaml](../openapi.yaml)).
+- **Messages and rules:** from the user stories (US05, US20, DoD03, DoD05).
+
+The production code was read only to learn how to call the application.
+
+**Test class:** `src/test/java/matriz/TaskApiPersistenceTest.java`.
+
+**Isolation:**
+- Each test creates its own two users and project, with unique names.
+- When it ends, it deletes the project (and with it its tasks), logs both users out and deletes them.
+- It then checks that the `project`, `task` and `users` tables have the same number of rows as before it started.
+
+| Test | Request | Expected (contract and stories) | Observed |
+|---|---|---|---|
+| A member creates a valid task and reads it back | `POST /api/projects/{id}/tasks` with every field, then `GET …/tasks/{taskId}` | `201`, then `200`; both bodies have the same id, project, title, description, due date, status `TODO`, priority `HIGH`, no assignees and `createdAt`; the `task` row has the same values, and no assignee rows exist | Pass |
+| Someone who isn't a member can't read the task | `GET …/tasks/{taskId}` as a non-member | `404`, `application/problem+json`, "Project not found.", no task field in the answer | Pass |
+| A title that is too short is refused and nothing is stored | `POST …/tasks` with the title "ab" | `422`, `application/problem+json`, "Task title must be at least 3 characters.", the project has no task | Pass |
+| A task that was deleted is not found | `DELETE …/tasks/{taskId}` (`204`), then `GET` it | `404`, "Task not found.", the project's stored tasks unchanged (only the other task left) | Pass |
+| A task identifier that never existed is not found | `GET …/tasks/{random id}` | `404`, "Task not found.", the project's stored tasks unchanged | Pass |
+
+**Commands and results:**
+
+| Command | Result |
+|---|---|
+| `./mvnw test -Dtest=TaskApiPersistenceTest -Dskip.npm -Dskip.installnodenpm` | **5 tests, 5 passed, 0 failed**. The row counts were back as before after every test. |
+| The same command, run a second time straight away | **5 passed**: the run doesn't depend on data left by an earlier one. |
+| The same, with the title's minimum temporarily changed from 3 to 2 | **1 failed**, as expected: the title "ab" was no longer refused with the story's message. The change was then reverted, and `git diff` shows no change under `src/main`. |
+| `./mvnw verify` | **BUILD SUCCESS**: 200 back-end tests (195 before, plus these 5), 0 failed, together with the browser application tests and `ModularityTest` |
+
+**Tests corrected:** one. The first version of the non-member test checked that the task's identifier didn't appear anywhere in the answer, and it failed. The identifier was there only in the `instance` field, which repeats the path the client itself requested, and the contract's `Problem` schema allows that field. No task data was disclosed, so the test was wrong. It now checks that the answer has none of the task's fields and not its title.
+
+**Defects found:** none in the behaviour under test. One difference between the code and the contract was noticed and left unchanged:
+- **D1, `type` missing from error answers.** The contract's `Problem` schema lists `type` as required (`required: [type, title, status, detail]`, default `about:blank`), but the error answers have no `type` field, e.g. `{"detail":"Project not found.","instance":"…","status":404,"title":"Not Found"}`.
+  - **Effect:** RFC 9457 reads a missing `type` as `about:blank`, so the meaning is the same. Only the contract's "required" doesn't hold.
+  - **Not tested:** the tests don't assert `type`, so the build stays green until this is decided.
+  - **Options:** make the code always send it, or drop it from `required` in the contract.
