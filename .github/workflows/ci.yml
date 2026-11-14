@@ -1,0 +1,132 @@
+# Continuous integration: the tests, static analysis of the code (SAST) and of the dependencies (SCA).
+# Any failing test or any finding fails the workflow. Deployment (CD) is not part of it yet (PD13).
+#
+# Actions are pinned to the commit of a release at least two weeks old; the version is in the comment.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # The end-to-end test's browser needs system libraries the runner may lack; the version matches
+      # frontend/package.json. The build itself installs Node, the npm packages and Chromium.
+      - name: Install the browser's system libraries
+        run: npx --yes playwright@1.64.1 install-deps chromium
+
+      # The same command as on a developer's machine (README.md): back-end tests against PostgreSQL in
+      # Testcontainers, the browser application's tests, ModularityTest and the end-to-end test.
+      - name: Build and run every test
+        run: ./mvnw --batch-mode verify
+
+      - name: Keep the test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  sast-semgrep:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: semgrep/semgrep:1.183.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The rule sets of the code and security review (docs/quality-security-review.md).
+      - name: Scan the code
+        run: >-
+          semgrep scan --metrics=off --error
+          --config p/java --config p/security-audit --config p/typescript --config p/react
+          --config p/secrets --config p/owasp-top-ten
+          src frontend/src frontend/e2e frontend/playwright.config.ts frontend/vite.config.ts
+          compose.yaml .env.example
+
+  sast-codeql:
+    name: SAST (CodeQL, ${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:${{ matrix.language }}
+          output: codeql-results
+
+      # The analysis publishes its alerts to code scanning but doesn't fail on them; this step does.
+      - name: Fail on any alert
+        run: |
+          alerts=$(jq '[.runs[].results[]] | length' codeql-results/*.sarif)
+          echo "CodeQL alerts: $alerts"
+          jq -r '.runs[].results[] | "\(.ruleId): \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine)"' codeql-results/*.sarif
+          test "$alerts" -eq 0
+
+  sca:
+    name: SCA (OSV-Scanner)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # OSV-Scanner can't read the versions in pom.xml, which come from Spring Boot's parent, so Maven
+      # writes a CycloneDX SBOM of the resolved dependencies (every scope, test included). The plugin is
+      # called here only; it isn't part of the build in pom.xml.
+      - name: Write the SBOM of the Maven dependencies
+        run: |
+          ./mvnw --batch-mode --quiet org.cyclonedx:cyclonedx-maven-plugin:2.9.3:makeBom \
+            -DoutputFormat=json -DoutputName=bom -DincludeTestScope=true
+          components=$(jq '.components | length' target/bom.json)
+          echo "Maven dependencies in the SBOM: $components"
+          test "$components" -gt 0
+
+      - name: Scan the dependencies
+        uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+        with:
+          scan-args: |-
+            --lockfile=target/bom.json
+            --lockfile=frontend/package-lock.json
