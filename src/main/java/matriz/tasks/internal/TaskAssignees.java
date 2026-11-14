@@ -97,7 +97,10 @@ class TaskAssignees {
         try {
             jdbc.sql("insert into task_assignee_team (task_id, team_id) values (?, ?) on conflict do nothing")
                     .params(taskId, teamId).update();
-        } catch (DataIntegrityViolationException teamDeletedInTheMeantime) {
+        } catch (DataIntegrityViolationException refused) {
+            if (!Problems.isMissingReference(refused)) {
+                throw refused;
+            }
             throw problem(HttpStatus.UNPROCESSABLE_CONTENT, TEAM_NOT_FOUND);   // AS10
         }
     }

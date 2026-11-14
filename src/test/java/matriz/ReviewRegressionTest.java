@@ -140,6 +140,91 @@ class ReviewRegressionTest {
         assertThat(comment.field("detail")).isEqualTo("Task not found.");
     }
 
+    @Test
+    void textWithANulCharacterIsRefusedAsAnUnreadableBodyAndNothingIsStored() {
+        String nul = "abc\u0000def";
+        UUID task = fixtures.addTask(ana, website, "Create logo", "TODO");
+        UUID team = fixtures.createTeam(ana, "Design " + UUID.randomUUID().toString().substring(0, 8));
+        String tasks = "/api/projects/" + website + "/tasks";
+        Map<String, Integer> before = storedRows();
+
+        Response[] answers = {
+            api.send("POST", "/api/projects", ApiClient.json(Map.of("name", nul)), ana.cookie(), ana.csrfToken()),
+            api.send("PATCH", "/api/projects/" + website, ApiClient.json(Map.of("name", nul)), ana.cookie(),
+                    ana.csrfToken()),
+            api.send("POST", tasks, ApiClient.json(Map.of("title", nul)), ana.cookie(), ana.csrfToken()),
+            api.send("POST", tasks, ApiClient.json(Map.of("title", "Valid title", "description", nul)), ana.cookie(),
+                    ana.csrfToken()),
+            api.send("PATCH", tasks + "/" + task, ApiClient.json(Map.of("title", nul)), ana.cookie(), ana.csrfToken()),
+            api.send("POST", tasks + "/" + task + "/comments", ApiClient.json(Map.of("text", nul)), ana.cookie(),
+                    ana.csrfToken()),
+            api.send("POST", "/api/teams", ApiClient.json(Map.of("name", nul)), ana.cookie(), ana.csrfToken()),
+            api.send("PATCH", "/api/teams/" + team, ApiClient.json(Map.of("name", nul)), ana.cookie(), ana.csrfToken()),
+            api.send("POST", "/api/projects/" + website + "/members", ApiClient.json(Map.of("email", "x\u0000@example.com")),
+                    ana.cookie(), ana.csrfToken()),
+        };
+
+        for (Response answer : answers) {
+            assertThat(answer.status()).as(answer.raw().request().method() + " " + answer.raw().uri().getPath())
+                    .isEqualTo(400);
+            assertThat(answer.field("detail")).isEqualTo("The request body is not valid.");
+        }
+        assertThat(storedRows()).isEqualTo(before);
+        assertThat(jdbc.sql("select name from project where id = ?").param(website).query(String.class).single())
+                .isEqualTo("Website");
+    }
+
+    @Test
+    void aSearchWithANulCharacterMatchesNoProjectAndKeepsTheTotals() {
+        fixtures.addTask(ana, website, "Create logo", "TODO");
+
+        for (String search : new String[] {"%00", "Web%00site"}) {
+            Response dashboard = api.send("GET", "/api/projects?name=" + search, null, ana.cookie(), null);
+
+            assertThat(dashboard.status()).as(search).isEqualTo(200);
+            assertThat(dashboard.json().get("projects").size()).as(search).isZero();
+            assertThat(dashboard.json().get("totals").get("toDo").asInt()).as(search).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void aLogInWithANulCharacterIsRefusedAsAnUnreadableBodyWithoutASession() {
+        for (String body : new String[] {
+            ApiClient.json(Map.of("email", "ana\u0000@example.com", "password", "test-password-x")),
+            ApiClient.json(Map.of("email", "ana@example.com", "password", "test\u0000password"))}) {
+            Response logIn = api.send("POST", "/api/session", body, null, null);
+
+            assertThat(logIn.status()).isEqualTo(400);
+            assertThat(logIn.field("detail")).isEqualTo("The request body is not valid.");
+            assertThat(logIn.sessionCookie()).isEmpty();
+        }
+    }
+
+    @Test
+    void aTeamDeletedJustBeforeItsAssignmentIsSavedIsNotFound() throws Exception {
+        UUID team = fixtures.createTeam(ana, "Design " + UUID.randomUUID().toString().substring(0, 8));
+        UUID task = fixtures.addTask(ana, website, "Create logo", "TODO");
+
+        Response assignment = whileHeld(
+                () -> {
+                    jdbc.sql("delete from team_member where team_id = ?").param(team).update();
+                    jdbc.sql("delete from team where id = ?").param(team).update();
+                },
+                () -> fixtures.assign(ana, website, task, "team", team));
+
+        assertThat(assignment.status()).isEqualTo(422);
+        assertThat(assignment.field("detail")).isEqualTo("Team not found.");
+        assertThat(fixtures.count("task_assignee_team", "task_id", task)).isZero();
+    }
+
+    private Map<String, Integer> storedRows() {
+        Map<String, Integer> rows = new java.util.TreeMap<>();
+        for (String table : new String[] {"project", "task", "task_comment", "team", "project_member"}) {
+            rows.put(table, jdbc.sql("select count(*) from " + table).query(Integer.class).single());
+        }
+        return rows;
+    }
+
     /**
      * Runs {@code first} in a transaction that stays open while {@code request} is sent, then commits it, and
      * returns the request's answer. The request has to wait for the open transaction wherever their rows meet.

@@ -121,7 +121,10 @@ class TasksController {
         UUID id;
         try {
             id = tasks.create(project, title, description, dueDate, priority);
-        } catch (DataIntegrityViolationException projectDeletedInTheMeantime) {
+        } catch (DataIntegrityViolationException refused) {
+            if (!Problems.isMissingReference(refused)) {
+                throw refused;
+            }
             throw new ProjectNotFoundException();   // the project was deleted while the task was being saved
         }
         return ResponseEntity.created(URI.create("/api/projects/" + project + "/tasks/" + id))

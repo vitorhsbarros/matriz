@@ -76,6 +76,11 @@ class JdbcProjects implements MyProjects {
     @Override
     public List<MyProject> of(UUID userId, String nameContains) {
         String text = nameContains == null ? "" : nameContains.strip();
+        if (text.indexOf('\u0000') >= 0) {
+            // No project name can contain NUL (it is refused when names are written), and PostgreSQL can't
+            // compare text with it, so such a search simply matches nothing (code-security-review.md, F4).
+            return List.of();
+        }
         return jdbc.sql("""
                 select p.id, p.name, case when p.manager_id = :user then 'MANAGER' else 'MEMBER' end as role
                 from project p

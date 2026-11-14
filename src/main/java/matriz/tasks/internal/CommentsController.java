@@ -86,7 +86,10 @@ class CommentsController {
         try {
             jdbc.sql("insert into task_comment (id, task_id, author_id, text) values (?, ?, ?, ?)")
                     .params(id, task, TaskPaths.user(authentication), text).update();
-        } catch (DataIntegrityViolationException taskDeletedInTheMeantime) {
+        } catch (DataIntegrityViolationException refused) {
+            if (!Problems.isMissingReference(refused)) {
+                throw refused;
+            }
             throw TasksController.taskNotFound();   // the task was deleted while the comment was being saved
         }
         return find(task, id).map(this::view).orElseThrow();
