@@ -224,3 +224,31 @@ The README's steps were followed word for word in a fresh clone, on 2026-11-12, 
 | Demo data | Log in as Rui in the browser | *App* (Manager) and *Website* (Member), created by the seed: [10-clean-copy-dashboard.png](verification/10-clean-copy-dashboard.png) |
 
 Afterwards, the clean copy's container and volume were deleted (`docker compose down -v` in the clone only).
+
+## 10. Unit tests of the task title rule
+
+On 2026-11-14 the rule for a task's title was tested at unit level, from the specification and not from the code: required, between 3 and 150 characters, counted after leading and trailing spaces are removed ([user-stories.md](user-stories.md), US05 AC03, AC08, D01, D02; [test-plan.md](test-plan.md), TP03, TP04). The production code was read only to find the unit to call, `TaskFields.title`. The expected messages are written in the test as the stories give them.
+
+**Test class:** `src/test/java/matriz/tasks/internal/TaskTitleRuleTest.java`. It runs with no Spring context, database or HTTP.
+
+| What is checked | Values | Expected (specification) | Observed |
+|---|---|---|---|
+| Valid titles are accepted unchanged | 3, 4, 75, 149, 150 characters | Accepted | Pass |
+| Spaces around the title are removed, spaces inside are kept | "  Review copy  "; "Design  home page" | "Review copy"; unchanged | Pass |
+| An empty title, or one with only spaces, is required | "", " ", "   " | "Task title is required." | Pass |
+| Too short | 1, 2 characters | "Task title must be at least 3 characters." | Pass |
+| Too long | 151, 300 characters | "Task title must be at most 150 characters." | Pass |
+| The minimum counts after removing spaces | "  ab  " | "Task title must be at least 3 characters." | Pass |
+| The maximum counts after removing spaces | 150 characters with two spaces on each side | Accepted, without the spaces | Pass |
+
+**Commands and results:**
+
+| Command | Result |
+|---|---|
+| `./mvnw test -Dtest=TaskTitleRuleTest -Dskip.npm -Dskip.installnodenpm` | **16 tests, 16 passed, 0 failed** |
+| The same, with the rule's maximum temporarily changed from 150 to 149 | **2 failed**, as expected: the 150-character title and the 150-character title with spaces around it were refused. The change was then reverted, and `git diff` shows no change under `src/main`. |
+| `./mvnw verify` | **BUILD SUCCESS**: 195 back-end tests (179 before, plus these 16), 0 failed, together with the browser application tests and `ModularityTest` |
+
+**Tests corrected:** one. The first version also treated a title made of a tab (`"\t"`) as missing. It passed, but the specification doesn't support it: D01 speaks of "spaces" and doesn't say whether a tab counts as one. The case was removed instead of being kept as a guess. The question is left open for the specification.
+
+**Defects found:** none. The rule meets US05, D01 and D02 for every value tested, and the rule was not changed.
