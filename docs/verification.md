@@ -351,3 +351,29 @@ At first, the forced kill only hit the `npx` wrapper: the real runner went on, f
 - **Docker:** the end-to-end test needs Docker running, as the back-end tests already did.
 - **Port:** it needs port 8095 free (or `E2E_PORT`).
 - **First run:** it downloads Chromium once (about 100 MB).
+
+## 13. Continuous integration on GitHub Actions
+
+On 2026-11-14 the CI workflow (`.github/workflows/ci.yml`) ran for the first time on GitHub, on its own commit `aa5ddbb`: [run 43652333374](https://github.com/vitorhsbarros/matriz/actions/runs/43652333374). Every job passed on the first run.
+
+| Job | What it ran | Result | Duration |
+|---|---|---|---|
+| Build and tests | `./mvnw verify` on `ubuntu-24.04`, Java 21: 213 back-end tests, 46 browser application tests, `ModularityTest`, and the end-to-end test in Chromium | Pass (BUILD SUCCESS in 2 min 55 s) | 3 min 21 s |
+| SAST (Semgrep) | Semgrep 1.183.0, the review's six rule sets: 239 rules on 101 files | Pass, 0 findings | 31 s |
+| SAST (CodeQL, java-kotlin) | CodeQL, default queries, results uploaded to code scanning | Pass, 0 alerts | 1 min 55 s |
+| SAST (CodeQL, javascript-typescript) | The same, for the browser application | Pass, 0 alerts | 1 min 20 s |
+| SCA (OSV-Scanner) | OSV-Scanner 2.7.0 over a CycloneDX SBOM of the Maven dependencies (155) and `frontend/package-lock.json` (137) | Pass, no known vulnerabilities | 41 s |
+
+**Code scanning:** GitHub lists both CodeQL analyses for `aa5ddbb`, each with 0 results, and the repository has 0 open alerts.
+
+**The same results as locally:**
+- **Tests:** the same numbers as the local `./mvnw verify`.
+- **Semgrep 1.183.0:** the same 0 findings as the job's command run locally. Locally it had to run in its amd64 variant: the arm64 image fails on this Mac with an I/O error when it starts its engine, while the older 1.157.0 works.
+- **OSV-Scanner:** the same 155 and 137 packages as locally.
+
+**Not run before the push:** CodeQL had not been run locally (no CLI installed), so its first result is this run's.
+
+**How the SCA job reads Maven:** OSV-Scanner can't read the versions in `pom.xml`, which come from Spring Boot's parent. When given the file, it filters out all 14 declared dependencies and still answers "No issues found", so that scan checked nothing. The job therefore has Maven write a CycloneDX SBOM (`cyclonedx-maven-plugin` 2.9.3, called on the command line only) and fails if it is empty.
+- **Checked locally:** an SBOM with `log4j-core` 2.14.1 gives 8 known vulnerabilities and exit code 1, so the job fails on findings.
+
+**Later runs:** each later run is recorded in the [GitHub Actions history](https://github.com/vitorhsbarros/matriz/actions/workflows/ci.yml), which is the evidence from now on. This section is updated only when the CI itself changes in a relevant way.
