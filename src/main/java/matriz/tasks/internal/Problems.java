@@ -37,7 +37,7 @@ final class Problems {
     /**
      * Whether the database refused a row because a row it refers to is gone: a foreign-key violation (PostgreSQL's
      * SQL state {@code 23503}). Only then does a deleted project, task or team explain the error; any other refusal
-     * is a different problem and must not be reported as "not found" (code-security-review.md, F2).
+     * is a different problem and must not be reported as "not found" (docs/quality-security-review.md, F2).
      */
     static boolean isMissingReference(DataIntegrityViolationException exception) {
         for (Throwable cause = exception; cause != null; cause = cause.getCause()) {

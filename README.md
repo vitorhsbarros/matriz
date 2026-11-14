@@ -52,6 +52,8 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
 
 | Folder | Contents |
 |---|---|
+| [docs/test-plan.md](docs/test-plan.md) | Test plan for tasks and their permissions, derived from the requirements: scenarios, expected results and the tests that check each one. |
+| [docs/quality-security-review.md](docs/quality-security-review.md) | Code and security review: findings with their evidence, the decisions taken, the fixes and their regression tests, and what was left unverified. |
 | [docs/verification.md](docs/verification.md) | Verification of the MVP: for each scenario, the expected result, the observed result and the evidence (tests, screenshots in [docs/verification/](docs/verification/), database checks), and how the data survives restarts. |
 | [docs/reviews/](docs/reviews/) | Critical reviews of the documentation, with the decisions taken on each finding. |
 | [docs/prompts/](docs/prompts/) | The prompts used to produce the documentation with AI assistance. |
@@ -74,7 +76,12 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
   - I4 to I6: project members, teams, assigning people and teams to tasks, and comments (US09–US13, US17, US18, US21, US22).
 
   Every MVP story can be used through the browser application, which has its own visual system ([docs/ui/README.md](docs/ui/README.md#visual-system-of-the-browser-application)).
-- **Verification and delivery:** every MVP scenario was verified and recorded in [docs/verification.md](docs/verification.md), and the code was reviewed for the delivery ([docs/implementation-plan.md](docs/implementation-plan.md#review-for-the-delivery--done-on-2026-11-12)). The delivered version is the Git tag `v1.0.0`.
+- **Verification and delivery:** every MVP scenario was verified and recorded in [docs/verification.md](docs/verification.md), and the code was reviewed for the delivery ([docs/implementation-plan.md](docs/implementation-plan.md#review-for-the-delivery--done-on-2026-11-12)). The MVP was delivered as the Git tag `v1.0.0`.
+- **Tests and quality (Lab 04):**
+  - tests derived from the requirements ([docs/test-plan.md](docs/test-plan.md)): unit, integration and end-to-end, all run by `./mvnw verify`;
+  - a code and security review ([docs/quality-security-review.md](docs/quality-security-review.md)), whose six findings were fixed.
+
+  The current version is the Git tag **`v1.0.1`** on the branch `main`: a patch with fixes and tests, and no new features. What wasn't run and what is still pending is listed in [docs/quality-security-review.md, "Delivery"](docs/quality-security-review.md#delivery).
 - **Not done yet:** the deployment to a hosting platform (PD13, pending).
 
 ## Running the application

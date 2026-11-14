@@ -17,7 +17,7 @@ import tools.jackson.databind.type.LogicalType;
  * Strict reading of request bodies (DoD07, api-contract.md AS07): unknown fields and fields of the wrong
  * JSON type are refused with {@code 400}, instead of being ignored or converted (e.g. the number 123
  * where text is expected). Text containing the NUL character is refused the same way: PostgreSQL can't
- * store it, so it would otherwise end in a server error (code-security-review.md, F1).
+ * store it, so it would otherwise end in a server error (docs/quality-security-review.md, F1).
  */
 @Configuration
 class JsonConfig {

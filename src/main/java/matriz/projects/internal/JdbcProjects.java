@@ -78,7 +78,7 @@ class JdbcProjects implements MyProjects {
         String text = nameContains == null ? "" : nameContains.strip();
         if (text.indexOf('\u0000') >= 0) {
             // No project name can contain NUL (it is refused when names are written), and PostgreSQL can't
-            // compare text with it, so such a search simply matches nothing (code-security-review.md, F4).
+            // compare text with it, so such a search simply matches nothing (docs/quality-security-review.md, F4).
             return List.of();
         }
         return jdbc.sql("""

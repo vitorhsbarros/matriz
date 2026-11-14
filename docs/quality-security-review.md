@@ -1,7 +1,7 @@
 # Code and security review
 
 - **Date:** 2026-11-14
-- **Reviewer:** Claude, acting as a senior application security engineer. The prompt is in [docs/prompts/code-security-review.md](../prompts/code-security-review.md).
+- **Reviewer:** Claude, acting as a senior application security engineer. The prompt is in [docs/prompts/code-security-review.md](prompts/code-security-review.md).
 - **Decisions:** Vitor Barros (human in the loop).
 - **Status:** closed. F1 to F6 were fixed after the developer's decisions, F1 to F4 each with a regression test, and the checks first left unverified were run afterwards (see "Checks run after the fixes" and "Build tools").
 
@@ -25,9 +25,9 @@
 - static analysis with Semgrep.
 
 **Rules reviewed against:**
-- SEC01–SEC11 and PRI01–PRI05 in [constraints.md](../constraints.md);
+- SEC01–SEC11 and PRI01–PRI05 in [constraints.md](constraints.md);
 - ADR-0002;
-- DoD02–DoD07, D07, D08 and SEC11 in [user-stories.md](../user-stories.md).
+- DoD02–DoD07, D07, D08 and SEC11 in [user-stories.md](user-stories.md).
 
 **Severity:**
 - **Critical:** data of other users read or changed, or authentication bypassed.
@@ -212,6 +212,8 @@ These were first listed as not verified; the developer asked for them to be chec
 | Known vulnerabilities, Java | The 155 resolved Maven dependencies (`mvnw dependency:list`, every scope) checked against the public OSV database (osv.dev): only public library coordinates were sent. The query was first shown to work: `log4j-core` 2.14.1 gives 8 known vulnerabilities. | 0 dependencies with known vulnerabilities |
 | Security headers | `GET /`, `/index.html` and `/api/session` | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Cache-Control: no-store` on all; no `Content-Security-Policy` |
 
+| Access between the demo accounts, as a repeatable test | The review's access checks ran with a script that isn't kept in the repository. `DemoAccountsAuthorizationTest` (6 tests, in every `./mvnw verify`) repeats the main ones with the real demo accounts and projects from the seed. Sara can neither read nor change "Website" or its tasks, members and comments (14 requests). Rui can't do the manager's actions. A task of another project can't be reached through the address of "App". Only the author changes a comment, only the manager changes a team, and Rui's verification token doesn't authorize Ana's request. It checks the data afterwards each time, and it deletes what it created. | 6 passed. With the membership check disabled for one run, the non-member test failed, so the test does check the rule. |
+
 **Observation, not a finding:** there is no `Content-Security-Policy`. No requirement asks for one, and the XSS check above found React's escaping sufficient, so it is not reported as a problem. A CSP would be extra protection to consider with the deployment (PD13).
 
 ## Build tools
@@ -272,6 +274,37 @@ Checked after the fixes, at the developer's request. **None of these tools is pa
 **Problems met on the way, none caused by the change:**
 - **`./mvnw clean verify` couldn't delete `target/`.** The IDE's Java extension rebuilt `target/classes` while Maven was deleting it. The build was run without `clean`.
 - **155 back-end tests failed once in the first `verify`.** The log-in gave no `MATRIZ_SESSION` cookie. The same tests passed when run alone, then all together (207 of 207), then in the full `verify`. The likely cause is the same IDE rebuild: a Spring context started without `application.yaml` names the cookie `SESSION`. This was classified as a limitation of the environment, not a defect.
-- **An invalid first check of the skip flags.** The shell passed the two flags as one argument, and `-DskipTests` skipped the test steps by itself. It was repeated correctly, as in the table above. The same mistake had affected a check recorded in exercise 4, which was corrected in [verification.md](../verification.md), section 12.
+- **An invalid first check of the skip flags.** The shell passed the two flags as one argument, and `-DskipTests` skipped the test steps by itself. It was repeated correctly, as in the table above. The same mistake had affected a check recorded in exercise 4, which was corrected in [verification.md](verification.md), section 12.
 - **A warning from npm 11.19.1 during `npm ci`:** "1 package has install scripts not yet covered by allowScripts: fsevents@2.3.3". It is a notice from the newer npm, which no longer runs install scripts that haven't been approved. The build still passes. `fsevents` is an optional macOS file-watching package that Vite uses, so nothing breaks without its script.
+
+## Delivery
+
+- **Version:** Git tag `v1.0.1` on the branch `main`. It is a patch over `v1.0.0`: fixes, tests and build tool updates, with no new features. The tag marks the commit that adds this section.
+- **How to run everything:** `./mvnw verify` (see [README.md](../README.md#4-build-and-run-the-tests)). The last run gave BUILD SUCCESS: 213 back-end tests, 46 browser application tests and 1 end-to-end test, all passing.
+
+**Tests by level:**
+- **Unit:** `TaskTitleRuleTest`, `MissingReferenceTest`.
+- **Integration:** `TaskApiPersistenceTest`, `DemoAccountsAuthorizationTest`, `ReviewRegressionTest` and the earlier API tests, against PostgreSQL in Testcontainers.
+- **End-to-end:** `frontend/e2e/create-task.e2e.ts`, in Chromium, against the built JAR.
+
+**Not run or not automated:**
+- **Firefox:** the end-to-end test was not run in it. **WebKit:** it was run once by hand, and is not part of the build.
+- **The test plan (TP05, TP10, TP15):** only partly automated.
+  - **TP05:** the test checks the message, but not that nothing is stored.
+  - **TP10:** the end-to-end test doesn't open the task's details.
+  - **TP15:** the test compares the status and message, not the whole answer.
+- **Not retested in this review:**
+  - races between access checks and changes, beyond the existing PD05 and R2 tests;
+  - session fixation, session expiry and log-out invalidation, which `SessionApiTest` covers;
+  - brute-force protection on log-in, which isn't in the requirements.
+- **HTTPS (SEC08):** it only applies to a deployment.
+
+**Pending problems and accepted risks:**
+- **No `Content-Security-Policy`:** not required. To consider with the deployment (PD13).
+- **`frontend-maven-plugin` 2.0.2 still brings Jackson 2.21, with 7 advisories:** a build-time tool with trusted input (F6).
+- **`plexus-utils`, `commons-io` and `commons-lang3` in the Maven plugins that Spring Boot 4.1.2 manages:** the vulnerable functions get no untrusted input. To be updated with Spring Boot.
+- **The `maven-site-plugin`'s libraries:** the plugin is never run.
+- **npm 11.19.1 warns that `fsevents` has an install script it didn't run:** the build passes.
+- **Several invalid fields at once:** the specification doesn't say which message is shown ([test-plan.md](test-plan.md), G1). The contract fixes an order (AS08) that the user stories don't state.
+- **PD13, the deployment platform:** still pending.
 
