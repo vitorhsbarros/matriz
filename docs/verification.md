@@ -376,4 +376,9 @@ On 2026-11-14 the CI workflow (`.github/workflows/ci.yml`) ran for the first tim
 **How the SCA job reads Maven:** OSV-Scanner can't read the versions in `pom.xml`, which come from Spring Boot's parent. When given the file, it filters out all 14 declared dependencies and still answers "No issues found", so that scan checked nothing. The job therefore has Maven write a CycloneDX SBOM (`cyclonedx-maven-plugin` 2.9.3, called on the command line only) and fails if it is empty.
 - **Checked locally:** an SBOM with `log4j-core` 2.14.1 gives 8 known vulnerabilities and exit code 1, so the job fails on findings.
 
+**The gates fail when they should:** a throw-away branch, `ci-gate-check`, had one commit that changed an expected message in `TaskTitleRuleTest`. The workflow was run on it with `workflow_dispatch`: [run 43652736040](https://github.com/vitorhsbarros/matriz/actions/runs/43652736040).
+- **Build and tests failed**, with 3 failures in `TaskTitleRuleTest`. The `test-reports` artefact (108 KB) was uploaded.
+- **The other four jobs passed**, as expected, since the change was only in a test.
+- **Afterwards,** the branch was deleted locally and on GitHub. The failed run stays in the history as evidence.
+
 **Later runs:** each later run is recorded in the [GitHub Actions history](https://github.com/vitorhsbarros/matriz/actions/workflows/ci.yml), which is the evidence from now on. This section is updated only when the CI itself changes in a relevant way.
