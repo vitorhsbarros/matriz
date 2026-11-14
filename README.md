@@ -133,9 +133,10 @@ This starts PostgreSQL 17.10 in a container, with the database, user and passwor
 This builds the back end and the browser application into one JAR (`target/matriz-0.1.0-SNAPSHOT.jar`) and runs every test:
 - the back-end tests, which start their own throw-away PostgreSQL with Testcontainers;
 - the browser application tests (Vitest);
-- `ModularityTest`, which checks the module boundaries.
+- `ModularityTest`, which checks the module boundaries;
+- the end-to-end test (Playwright): a real Chromium logs in, opens a project, creates a task and finds it on the board. It runs against the JAR just built and a throw-away PostgreSQL in Docker, on port 8095 (`E2E_PORT` changes it), so port 8095 must be free. It never touches your own database or `.env`.
 
-The first run downloads the dependencies and takes a few minutes. Later runs take about two. To run one back-end test class only: `./mvnw test -Dtest=TasksApiTest -Dskip.npm -Dskip.installnodenpm`.
+The first run downloads the dependencies, and Chromium for the end-to-end test (about 100 MB), and takes a few minutes. Later runs take about two and a half. To run one back-end test class only: `./mvnw test -Dtest=TasksApiTest -Dskip.npm -Dskip.installnodenpm`. To skip only the end-to-end test: `./mvnw verify -Dskip.e2e`.
 
 ### 5. Start the application
 
@@ -170,7 +171,7 @@ Log in as different people to see the access rules: Sara gets "Project not found
 
 ### Working on the browser application
 
-`cd frontend && npm ci && npm run dev` starts Vite on `http://localhost:5173`, which forwards `/api` to the application on port 8080, or on `MATRIZ_API_PORT` (e.g. `MATRIZ_API_PORT=8081 npm run dev`). `npm test` runs its tests. This needs Node 24 installed.
+`cd frontend && npm ci && npm run dev` starts Vite on `http://localhost:5173`, which forwards `/api` to the application on port 8080, or on `MATRIZ_API_PORT` (e.g. `MATRIZ_API_PORT=8081 npm run dev`). `npm test` runs its tests. `npm run e2e` runs the end-to-end test on its own, once the JAR has been built (`./mvnw package -DskipTests`); when it fails, it keeps a screenshot and a trace in `frontend/test-results/` (`npx playwright show-trace <trace.zip>`). This needs Node 24 installed.
 
 **What can be done now** (every MVP story):
 - **Log in and out** with a demo account. The header shows who is logged in.

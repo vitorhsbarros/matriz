@@ -291,3 +291,63 @@ The production code was read only to learn how to call the application.
 - **D1, `type` missing from error answers.** The contract's `Problem` schema listed `type` as required (`required: [type, title, status, detail]`, default `about:blank`), but the error answers have no `type` field, e.g. `{"detail":"Project not found.","instance":"…","status":404,"title":"Not Found"}`. RFC 9457 reads a missing `type` as `about:blank`, so the meaning is the same, and no user story or client relies on the field: the browser application reads only `detail`.
   - **Resolved (decided by the developer):** the contract was corrected rather than the code. `type` is no longer required, its description says it is omitted when it is `about:blank`, and the 72 error examples no longer show it.
   - **Checks after the change:** the contract still lints as valid, with the same single expected warning (`localhost`, AS03), and `./mvnw verify` passes.
+
+## 12. End-to-end test: creating a task through the browser
+
+On 2026-11-14 a user journey was automated in a real browser with Playwright 1.64.1 (Chromium), added with the developer's approval: **log in → open a project → create a task → find it on the board**.
+
+**Test:** `frontend/e2e/create-task.e2e.ts`, configured by `frontend/playwright.config.ts`.
+
+**What it runs against:** `frontend/e2e/server.mjs` starts, for every run:
+- a throw-away PostgreSQL 17.10 in Docker, on a free port;
+- the JAR just built, on port 8095, in an empty working directory, so a developer's `.env` is never read.
+
+At the end the script stops both. The database is new every time, so no run depends on an earlier one.
+
+**Test data:**
+- **The account:** the demo account Ana. Her password comes from `MATRIZ_DEMO_PASSWORD_ANA` if it is set; otherwise the run makes one up and gives it to both the application and the test. No password is in the repository.
+- **The project:** before the journey, a project with a unique name is created through the API, and it is deleted after it.
+
+| Step | What the test does | Expected (user stories, wireframe) | Observed |
+|---|---|---|---|
+| Log in | Fills **Email** and **Password** on the log-in screen, clicks **Log in** | The home dashboard, heading "My projects" | Pass |
+| Open the project | Clicks the test project's name on the dashboard | The project's board, headed with its name | Pass |
+| Create a task | **New task**, fills **Title** with a unique title, **Create task** | — | Pass |
+| Find it on the board | Looks in the board's column "To do" | The card is in "To do", shows "Unassigned", the column's count is 1, and the task is in neither "In progress" nor "Done" | Pass |
+
+**How elements are found:**
+- **Selectors:** only by role, label and visible text (`getByRole`, `getByLabel`), checked against the screens' accessibility tree. There are no CSS selectors, and no `data-testid` was added.
+- **Waiting:** there are no fixed waits; the test uses Playwright's automatic waiting and assertions.
+- **On failure:** a screenshot and a trace are kept, and only then.
+
+**Commands and results:**
+
+| Command | Result |
+|---|---|
+| `npm run e2e` (in `frontend/`), twice in a row | **1 passed** each time, about 10 s, each with a brand-new database; no container left behind (`docker ps -a --filter label=matriz-e2e` is empty) |
+| The same, with the test temporarily expecting the card in "In progress" | **1 failed**, as expected, with `test-failed-1.png` and `trace.zip` kept. The screenshot shows the card in "To do" as "Unassigned", so the failure was the test's own change: a problem with the test, not a defect. The test was then restored. |
+| `./mvnw verify -Dskip.e2e`, and `./mvnw verify -Dskip.npm -Dskip.installnodenpm` | The `npm-e2e` step is skipped |
+| `./mvnw verify` | **BUILD SUCCESS** in 133 s: 200 back-end tests, 46 browser application tests, then the `npm-e2e` step: "1 passed" |
+
+**Other browser, checked once:** the same test was run in **WebKit** (Safari's engine), with a temporary configuration that was deleted afterwards. **1 passed.** The build keeps Chromium only, as decided.
+
+**Interrupting a run.** Each case was forced while the application was up, then the leftovers were checked (containers labelled `matriz-e2e`, a process on port 8095, the server script):
+
+| How the run was interrupted | First version of `server.mjs` | After the correction |
+|---|---|---|
+| Ctrl+C (SIGINT to the whole process group) | Nothing left | Nothing left |
+| `kill -9` of the Playwright runner and workers | The server script, the application on port 8095 and the container were left running. The next run refused to start: "http://localhost:8095/actuator/health is already used". | Nothing left: the script notices Playwright is gone within a second and cleans up. The next run passes straight away. |
+| `kill -9` of the server script itself | Not tried | The application stopped with it; only the container was left, and the next run removed it (by its label) and passed. |
+
+At first, the forced kill only hit the `npx` wrapper: the real runner went on, finished and cleaned up, so that case was repeated against the runner itself.
+
+**Test infrastructure corrected:** `server.mjs`, in two ways (not production code):
+- **It watches the process that started it,** and stops the application and the database when that process is gone.
+- **It waits for the application to stop** (up to 20 s, then kills it) before it exits. Before, it exited at once, while Spring was still shutting down, so a run started straight afterwards could find port 8095 still taken.
+
+**Tests corrected:** none. **Defects found:** none in the application.
+
+**Environment limitations:**
+- **Docker:** the end-to-end test needs Docker running, as the back-end tests already did.
+- **Port:** it needs port 8095 free (or `E2E_PORT`).
+- **First run:** it downloads Chromium once (about 100 MB).

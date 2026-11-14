@@ -96,11 +96,11 @@ End every task with a short report:
 - **Commands** (details in [README.md](README.md#running-the-application)):
   - **Configuration:** `cp .env.example .env`, then replace every value. `.env` is never committed.
   - **Start the database:** `docker compose up -d --wait` (reads `.env`). `docker compose down` stops it and keeps the data.
-  - **Build and test everything:** `./mvnw verify`: the back-end tests (Testcontainers, so Docker must be running), the browser application tests, `ModularityTest`, and the JAR with the browser application inside.
+  - **Build and test everything:** `./mvnw verify`: the back-end tests (Testcontainers, so Docker must be running), the browser application tests, `ModularityTest`, the JAR with the browser application inside, and then the end-to-end test (Playwright, Chromium) against that JAR and a throw-away PostgreSQL, on port 8095. `-Dskip.e2e` skips only the end-to-end test.
   - **One test class, back end only:** `./mvnw test -Dtest=TasksApiTest -Dskip.npm -Dskip.installnodenpm`.
   - **Run the application:** `java -jar target/matriz-0.1.0-SNAPSHOT.jar`, or `./mvnw spring-boot:run`. Another port: `SERVER_PORT=8081 java -jar …`. Flyway creates or updates the schema at start-up, and `MATRIZ_DEMO_SEED=true` adds the demo accounts and projects that are missing.
   - **Check it runs:** `curl http://localhost:8080/actuator/health` answers `{"status":"UP"…}`.
-  - **Browser application only:** in `frontend/`, `npm ci` once, then `npm run dev` (Vite on port 5173, forwarding `/api` to port 8080 or to `MATRIZ_API_PORT`), `npm test`, `npm run build`.
+  - **Browser application only:** in `frontend/`, `npm ci` once, then `npm run dev` (Vite on port 5173, forwarding `/api` to port 8080 or to `MATRIZ_API_PORT`), `npm test`, `npm run build`, `npm run e2e` (needs the JAR built first).
   - **Module boundaries:** checked by `ModularityTest` (Spring Modulith) in every build.
   - **Verification record:** [docs/verification.md](docs/verification.md) lists each scenario's expected and observed results and their evidence. Update it when a check is run again.
 - **Style:** no formatter or linter is configured yet. Follow the existing code: 4-space indentation in Java, 2 spaces in TypeScript, JSON and YAML.
