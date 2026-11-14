@@ -107,14 +107,14 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Unauthorized, status: 401, detail: "Invalid email or password."}
+              example: {title: Unauthorized, status: 401, detail: "Invalid email or password."}
         '422':
           description: Email or password missing (US02 AC05).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Email and password are required."}
+              example: {title: Unprocessable Content, status: 422, detail: "Email and password are required."}
     get:
       tags: [Accounts]
       operationId: getSession
@@ -243,9 +243,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Project name is required."}}
-                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Project name must be at most 100 characters."}}
-                descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
+                nameRequired: {value: {title: Unprocessable Content, status: 422, detail: "Project name is required."}}
+                nameTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Project name must be at most 100 characters."}}
+                descriptionTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
 
   /projects/{projectId}:
     parameters:
@@ -303,8 +303,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the project manager can edit the project."}}
-                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+                notManager: {value: {title: Forbidden, status: 403, detail: "Only the project manager can edit the project."}}
+                invalidCsrfToken: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
         '404':
           $ref: '#/components/responses/ProjectNotFound'
         '422':
@@ -314,9 +314,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Project name is required."}}
-                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Project name must be at most 100 characters."}}
-                descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
+                nameRequired: {value: {title: Unprocessable Content, status: 422, detail: "Project name is required."}}
+                nameTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Project name must be at most 100 characters."}}
+                descriptionTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
     delete:
       tags: [Projects]
       operationId: deleteProject
@@ -338,8 +338,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the project manager can delete the project."}}
-                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+                notManager: {value: {title: Forbidden, status: 403, detail: "Only the project manager can delete the project."}}
+                invalidCsrfToken: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
         '404':
           $ref: '#/components/responses/ProjectNotFound'
 
@@ -404,8 +404,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the project manager can manage members."}}
-                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+                notManager: {value: {title: Forbidden, status: 403, detail: "Only the project manager can manage members."}}
+                invalidCsrfToken: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
         '404':
           $ref: '#/components/responses/ProjectNotFound'
         '409':
@@ -414,7 +414,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Conflict, status: 409, detail: "This user is already a member of the project."}
+              example: {title: Conflict, status: 409, detail: "This user is already a member of the project."}
         '422':
           description: The user can't be added (US09 AC04, no account with this email; the message doesn't reveal whether the account exists, SEC09), or the email is missing.
           content:
@@ -422,8 +422,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                userNotFound: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "This user could not be added."}}
-                emailRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Email is required."}}
+                userNotFound: {value: {title: Unprocessable Content, status: 422, detail: "This user could not be added."}}
+                emailRequired: {value: {title: Unprocessable Content, status: 422, detail: "Email is required."}}
 
   /projects/{projectId}/members/{userId}:
     parameters:
@@ -451,8 +451,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the project manager can manage members."}}
-                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+                notManager: {value: {title: Forbidden, status: 403, detail: "Only the project manager can manage members."}}
+                invalidCsrfToken: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
         '404':
           description: The project isn't accessible, or the user isn't a member of it.
           content:
@@ -460,15 +460,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                projectNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Project not found."}}
-                memberNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Member not found."}}
+                projectNotFound: {value: {title: Not Found, status: 404, detail: "Project not found."}}
+                memberNotFound: {value: {title: Not Found, status: 404, detail: "Member not found."}}
         '422':
           description: Trying to remove the manager (US09 AC06).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Unprocessable Content, status: 422, detail: "The project manager cannot be removed."}
+              example: {title: Unprocessable Content, status: 422, detail: "The project manager cannot be removed."}
 
   # ---------------------------------------------------------------- Teams
   /teams:
@@ -534,7 +534,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Conflict, status: 409, detail: "A team with this name already exists."}
+              example: {title: Conflict, status: 409, detail: "A team with this name already exists."}
         '422':
           description: Invalid team name (US11 AC02, AC05).
           content:
@@ -542,8 +542,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team name is required."}}
-                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team name must be at most 50 characters."}}
+                nameRequired: {value: {title: Unprocessable Content, status: 422, detail: "Team name is required."}}
+                nameTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Team name must be at most 50 characters."}}
 
   /teams/{teamId}:
     parameters:
@@ -581,8 +581,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the team manager can edit the team."}}
-                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+                notManager: {value: {title: Forbidden, status: 403, detail: "Only the team manager can edit the team."}}
+                invalidCsrfToken: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
         '404':
           $ref: '#/components/responses/TeamNotFound'
         '409':
@@ -591,7 +591,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Conflict, status: 409, detail: "A team with this name already exists."}
+              example: {title: Conflict, status: 409, detail: "A team with this name already exists."}
         '422':
           description: Invalid team name (US17 AC03, AC07).
           content:
@@ -599,8 +599,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                nameRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team name is required."}}
-                nameTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team name must be at most 50 characters."}}
+                nameRequired: {value: {title: Unprocessable Content, status: 422, detail: "Team name is required."}}
+                nameTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Team name must be at most 50 characters."}}
     delete:
       tags: [Teams]
       operationId: deleteTeam
@@ -623,8 +623,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the team manager can delete the team."}}
-                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+                notManager: {value: {title: Forbidden, status: 403, detail: "Only the team manager can delete the team."}}
+                invalidCsrfToken: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
         '404':
           $ref: '#/components/responses/TeamNotFound'
 
@@ -665,8 +665,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the team manager can manage members."}}
-                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+                notManager: {value: {title: Forbidden, status: 403, detail: "Only the team manager can manage members."}}
+                invalidCsrfToken: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
         '404':
           $ref: '#/components/responses/TeamNotFound'
         '409':
@@ -675,7 +675,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Conflict, status: 409, detail: "This user is already a member of the team."}
+              example: {title: Conflict, status: 409, detail: "This user is already a member of the team."}
         '422':
           description: The user can't be added (US12 AC03, no account with this email; the message doesn't reveal whether the account exists, SEC09), or the email is missing.
           content:
@@ -683,8 +683,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                userNotFound: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "This user could not be added."}}
-                emailRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Email is required."}}
+                userNotFound: {value: {title: Unprocessable Content, status: 422, detail: "This user could not be added."}}
+                emailRequired: {value: {title: Unprocessable Content, status: 422, detail: "Email is required."}}
 
   /teams/{teamId}/members/{userId}:
     parameters:
@@ -710,8 +710,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                notManager: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the team manager can manage members."}}
-                invalidCsrfToken: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+                notManager: {value: {title: Forbidden, status: 403, detail: "Only the team manager can manage members."}}
+                invalidCsrfToken: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
         '404':
           description: The team doesn't exist, or the user isn't a member of it.
           content:
@@ -719,15 +719,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                teamNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Team not found."}}
-                memberNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Member not found."}}
+                teamNotFound: {value: {title: Not Found, status: 404, detail: "Team not found."}}
+                memberNotFound: {value: {title: Not Found, status: 404, detail: "Member not found."}}
         '422':
           description: Trying to remove the manager (US12 AC05).
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-              example: {type: about:blank, title: Unprocessable Content, status: 422, detail: "The team manager cannot be removed."}
+              example: {title: Unprocessable Content, status: 422, detail: "The team manager cannot be removed."}
 
   # ---------------------------------------------------------------- Tasks
   /projects/{projectId}/eligible-assignees:
@@ -831,8 +831,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                invalidStatus: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid status."}}
-                invalidPriority: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
+                invalidStatus: {value: {title: Unprocessable Content, status: 422, detail: "Invalid status."}}
+                invalidPriority: {value: {title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
     post:
       tags: [Tasks]
       operationId: createTask
@@ -969,10 +969,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
               examples:
-                invalidStatus: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid status."}}
-                invalidPriority: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
-                titleRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title is required."}}
-                dueDateInPast: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
+                invalidStatus: {value: {title: Unprocessable Content, status: 422, detail: "Invalid status."}}
+                invalidPriority: {value: {title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
+                titleRequired: {value: {title: Unprocessable Content, status: 422, detail: "Task title is required."}}
+                dueDateInPast: {value: {title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
     delete:
       tags: [Tasks]
       operationId: deleteTask
@@ -1060,13 +1060,13 @@ paths:
               examples:
                 personNotMember:
                   summary: Person isn't a project member (US10 AC04, AC05)
-                  value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "The assignee must be a member of the project."}
+                  value: {title: Unprocessable Content, status: 422, detail: "The assignee must be a member of the project."}
                 teamMembersOutsideProject:
                   summary: A team member isn't in the project (US13 AC04)
-                  value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "All team members must belong to the project."}
+                  value: {title: Unprocessable Content, status: 422, detail: "All team members must belong to the project."}
                 teamNotFound:
                   summary: The team doesn't exist (US13 AC05)
-                  value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Team not found."}
+                  value: {title: Unprocessable Content, status: 422, detail: "Team not found."}
 
   /projects/{projectId}/tasks/{taskId}/assignees/users/{userId}:
     parameters:
@@ -1323,21 +1323,21 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
-          example: {type: about:blank, title: Bad Request, status: 400, detail: "The request body is not valid."}
+          example: {title: Bad Request, status: 400, detail: "The request body is not valid."}
     NotLoggedIn:
       description: No valid session (NFR02, DoD02).
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
-          example: {type: about:blank, title: Unauthorized, status: 401, detail: "Please log in to continue."}
+          example: {title: Unauthorized, status: 401, detail: "Please log in to continue."}
     InvalidCsrfToken:
       description: The CSRF token is missing or doesn't match the session.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
-          example: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}
+          example: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}
     ProjectNotFound:
       description: |
         The project doesn't exist or the user isn't a member of it. Both cases get the
@@ -1346,7 +1346,7 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
-          example: {type: about:blank, title: Not Found, status: 404, detail: "Project not found."}
+          example: {title: Not Found, status: 404, detail: "Project not found."}
     ProjectOrTaskNotFound:
       description: The project isn't accessible (NFR03, DoD03), or the task doesn't exist in it.
       content:
@@ -1354,15 +1354,15 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           examples:
-            projectNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Project not found."}}
-            taskNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Task not found."}}
+            projectNotFound: {value: {title: Not Found, status: 404, detail: "Project not found."}}
+            taskNotFound: {value: {title: Not Found, status: 404, detail: "Task not found."}}
     TeamNotFound:
       description: The team doesn't exist.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
-          example: {type: about:blank, title: Not Found, status: 404, detail: "Team not found."}
+          example: {title: Not Found, status: 404, detail: "Team not found."}
     CommentNotFound:
       description: The project isn't accessible (NFR03, DoD03), or the task or the comment doesn't exist in it.
       content:
@@ -1370,9 +1370,9 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           examples:
-            projectNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Project not found."}}
-            taskNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Task not found."}}
-            commentNotFound: {value: {type: about:blank, title: Not Found, status: 404, detail: "Comment not found."}}
+            projectNotFound: {value: {title: Not Found, status: 404, detail: "Project not found."}}
+            taskNotFound: {value: {title: Not Found, status: 404, detail: "Task not found."}}
+            commentNotFound: {value: {title: Not Found, status: 404, detail: "Comment not found."}}
     NotCommentAuthor:
       description: The CSRF token is invalid, or the user isn't the comment's author (US22 AC05).
       content:
@@ -1380,8 +1380,8 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           examples:
-            notAuthor: {value: {type: about:blank, title: Forbidden, status: 403, detail: "Only the author can change this comment."}}
-            invalidCsrf: {value: {type: about:blank, title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
+            notAuthor: {value: {title: Forbidden, status: 403, detail: "Only the author can change this comment."}}
+            invalidCsrf: {value: {title: Forbidden, status: 403, detail: "The request could not be verified. Please reload and try again."}}
     InvalidCommentText:
       description: The comment text is invalid (US21 AC03, AC05, US22 AC06).
       content:
@@ -1389,8 +1389,8 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           examples:
-            textRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Comment is required."}}
-            textTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Comment must be at most 2000 characters."}}
+            textRequired: {value: {title: Unprocessable Content, status: 422, detail: "Comment is required."}}
+            textTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Comment must be at most 2000 characters."}}
     InvalidTaskData:
       description: |
         The task data is invalid (US05 AC03–AC05, AC08, AC10). Validations are checked in
@@ -1401,13 +1401,13 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
           examples:
-            titleRequired: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title is required."}}
-            titleTooShort: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title must be at least 3 characters."}}
-            titleTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Task title must be at most 150 characters."}}
-            descriptionTooLong: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
-            dueDateInPast: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
-            dueDateInvalid: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Enter a valid date."}}
-            invalidPriority: {value: {type: about:blank, title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
+            titleRequired: {value: {title: Unprocessable Content, status: 422, detail: "Task title is required."}}
+            titleTooShort: {value: {title: Unprocessable Content, status: 422, detail: "Task title must be at least 3 characters."}}
+            titleTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Task title must be at most 150 characters."}}
+            descriptionTooLong: {value: {title: Unprocessable Content, status: 422, detail: "Description must be at most 2000 characters."}}
+            dueDateInPast: {value: {title: Unprocessable Content, status: 422, detail: "Due date cannot be in the past."}}
+            dueDateInvalid: {value: {title: Unprocessable Content, status: 422, detail: "Enter a valid date."}}
+            invalidPriority: {value: {title: Unprocessable Content, status: 422, detail: "Invalid priority."}}
 
   schemas:
     Identifier:
@@ -1828,12 +1828,13 @@ components:
     Problem:
       type: object
       description: Problem Details (RFC 9457).
-      required: [type, title, status, detail]
+      required: [title, status, detail]
       properties:
         type:
           type: string
           format: uri-reference
           default: about:blank
+          description: Omitted when it is `about:blank` (RFC 9457), as in every answer of this API.
         title:
           type: string
           description: Short summary of the HTTP status.

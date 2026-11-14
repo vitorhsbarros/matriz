@@ -287,8 +287,7 @@ The production code was read only to learn how to call the application.
 
 **Tests corrected:** one. The first version of the non-member test checked that the task's identifier didn't appear anywhere in the answer, and it failed. The identifier was there only in the `instance` field, which repeats the path the client itself requested, and the contract's `Problem` schema allows that field. No task data was disclosed, so the test was wrong. It now checks that the answer has none of the task's fields and not its title.
 
-**Defects found:** none in the behaviour under test. One difference between the code and the contract was noticed and left unchanged:
-- **D1, `type` missing from error answers.** The contract's `Problem` schema lists `type` as required (`required: [type, title, status, detail]`, default `about:blank`), but the error answers have no `type` field, e.g. `{"detail":"Project not found.","instance":"…","status":404,"title":"Not Found"}`.
-  - **Effect:** RFC 9457 reads a missing `type` as `about:blank`, so the meaning is the same. Only the contract's "required" doesn't hold.
-  - **Not tested:** the tests don't assert `type`, so the build stays green until this is decided.
-  - **Options:** make the code always send it, or drop it from `required` in the contract.
+**Defects found:** none in the behaviour under test. One difference between the code and the contract was found and resolved in the contract:
+- **D1, `type` missing from error answers.** The contract's `Problem` schema listed `type` as required (`required: [type, title, status, detail]`, default `about:blank`), but the error answers have no `type` field, e.g. `{"detail":"Project not found.","instance":"…","status":404,"title":"Not Found"}`. RFC 9457 reads a missing `type` as `about:blank`, so the meaning is the same, and no user story or client relies on the field: the browser application reads only `detail`.
+  - **Resolved (decided by the developer):** the contract was corrected rather than the code. `type` is no longer required, its description says it is omitted when it is `about:blank`, and the 72 error examples no longer show it.
+  - **Checks after the change:** the contract still lints as valid, with the same single expected warning (`localhost`, AS03), and `./mvnw verify` passes.
