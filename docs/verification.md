@@ -326,7 +326,7 @@ At the end the script stops both. The database is new every time, so no run depe
 |---|---|
 | `npm run e2e` (in `frontend/`), twice in a row | **1 passed** each time, about 10 s, each with a brand-new database; no container left behind (`docker ps -a --filter label=matriz-e2e` is empty) |
 | The same, with the test temporarily expecting the card in "In progress" | **1 failed**, as expected, with `test-failed-1.png` and `trace.zip` kept. The screenshot shows the card in "To do" as "Unassigned", so the failure was the test's own change: a problem with the test, not a defect. The test was then restored. |
-| `./mvnw verify -Dskip.e2e`, and `./mvnw verify -Dskip.npm -Dskip.installnodenpm` | The `npm-e2e` step is skipped |
+| `./mvnw verify -Dskip.e2e`, and `./mvnw verify -Dskip.npm -Dskip.installnodenpm` | The `npm-e2e` step is skipped. **Corrected on 2026-11-14 (code and security review):** this first check was not valid. It also passed `-DskipTests`, which skips the test steps by itself, and the shell passed the two flags as one argument. Run again without `-DskipTests` and with separate arguments (Java tests limited to `CookieDefaultsTest`, `frontend-maven-plugin` 2.0.2): with no flag, every npm step runs, the end-to-end test included; `-Dskip.e2e` skips only `npm-e2e`; `-Dskip.npm -Dskip.installnodenpm` skips the Node installation and every npm step. |
 | `./mvnw verify` | **BUILD SUCCESS** in 133 s: 200 back-end tests, 46 browser application tests, then the `npm-e2e` step: "1 passed" |
 
 **Other browser, checked once:** the same test was run in **WebKit** (Safari's engine), with a temporary configuration that was deleted afterwards. **1 passed.** The build keeps Chromium only, as decided.
