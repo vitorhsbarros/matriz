@@ -1,0 +1,21 @@
+# The build context holds only what the image build needs. Everything else stays out, above all .env
+# (secrets), .git, build output and installed packages. Allow-list: exclude everything, then add back.
+*
+
+!mvnw
+!.mvn/wrapper/maven-wrapper.properties
+!pom.xml
+!src/main/
+
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/index.html
+!frontend/tsconfig.json
+!frontend/vite.config.ts
+!frontend/public/
+!frontend/src/
+
+# Never sent, even inside an allowed folder.
+**/.env
+**/.env.*
+**/.DS_Store
