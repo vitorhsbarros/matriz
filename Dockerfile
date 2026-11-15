@@ -31,6 +31,12 @@ RUN --mount=type=cache,target=/root/.m2 \
 # Final stage: only the Java runtime and the JAR.
 FROM eclipse-temurin:21.0.13_9-jre-noble@sha256:0d57a8e90c2bb844c5a8e1b2b71e11eff06dad7edcfd803cd21ed4ae203b2515
 
+# Ubuntu security updates published after the base image was built, so a known vulnerability that
+# already has a fix doesn't wait for a new base image (the image scan in CI fails on those).
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade --yes --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 # A system user with no home and no login shell runs the application.
 RUN groupadd --system --gid 10001 matriz \
     && useradd --system --uid 10001 --gid matriz --no-create-home --shell /usr/sbin/nologin matriz

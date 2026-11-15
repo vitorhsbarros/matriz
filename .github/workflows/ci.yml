@@ -1,4 +1,5 @@
-# Continuous integration: the tests, static analysis of the code (SAST) and of the dependencies (SCA).
+# Continuous integration: the tests, static analysis of the code (SAST) and of the dependencies (SCA),
+# then the container image, built, scanned and tested only once all of those have passed.
 # Any failing test or any finding fails the workflow. Deployment (CD) is not part of it yet (PD13).
 #
 # Actions are pinned to the commit of a release at least two weeks old; the version is in the comment.
@@ -130,3 +131,106 @@ jobs:
           scan-args: |-
             --lockfile=target/bom.json
             --lockfile=frontend/package-lock.json
+
+  # The application image (Dockerfile), built only after every check above has passed. It is scanned
+  # for known vulnerabilities and tested with Docker Compose, then thrown away: nothing is published.
+  image:
+    name: Image (build, scan and smoke test)
+    needs: [build, sast-semgrep, sast-codeql, sca]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The image's layers are cached in GitHub Actions' cache between runs.
+      - name: Build the image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          tags: matriz:local
+          load: true
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The same OSV-Scanner as the sca job (the image its action runs, pinned by digest), here over the
+      # image's operating system packages. It fails only on vulnerabilities that already have a fix,
+      # which a newer base image or package update would remove; the others are listed.
+      - name: Scan the image
+        run: |
+          docker save matriz:local --output "$RUNNER_TEMP/image.tar"
+          code=0
+          docker run --rm --volume "$RUNNER_TEMP:/scan" --entrypoint osv-scanner \
+            ghcr.io/google/osv-scanner-action:v2.7.0@sha256:d54770fe0b09493894e76a02aaed9f51a0513fa57c5186452a755d257b0068a6 \
+            scan image --archive /scan/image.tar --format json --output-file /scan/osv-image.json \
+            > "$RUNNER_TEMP/osv.log" 2>&1 || code=$?
+          # 0: nothing found; 1: vulnerabilities found. Anything else means the scan itself failed.
+          if [ "$code" -gt 1 ]; then cat "$RUNNER_TEMP/osv.log"; exit "$code"; fi
+          # One row per advisory and package, with the fixed version for the package's own release.
+          jq '[ .results[]?.packages[] as $p | $p.groups[] as $g
+                | [ $p.vulnerabilities[] | select(.id as $id | $g.ids | index($id)) | .affected[]?
+                    | select(.package.name == $p.package.name
+                             and ((.package.ecosystem // "") | startswith($p.package.ecosystem)))
+                    | .ranges[]?.events[]? | .fixed // empty ] as $fixes
+                | { id: $g.ids[0], package: ($p.package.os_package_name // $p.package.name),
+                    version: $p.package.version, severity: ($g.max_severity // "-"),
+                    fixed: ($fixes | unique | join(", ")) } ]' \
+            "$RUNNER_TEMP/osv-image.json" > "$RUNNER_TEMP/rows.json"
+          fixable=$(jq '[.[] | select(.fixed != "")] | length' "$RUNNER_TEMP/rows.json")
+          unfixed=$(jq '[.[] | select(.fixed == "")] | length' "$RUNNER_TEMP/rows.json")
+          {
+            echo "### Image scan (OSV-Scanner)"
+            echo
+            echo "Vulnerabilities with a fix: **$fixable**. Without a fix yet: $unfixed."
+            echo
+            echo "| Advisory | Package | Version | Severity | Fixed in |"
+            echo "|---|---|---|---|---|"
+            jq -r 'sort_by(.fixed == "") | .[]
+                   | "| \(.id) | \(.package) | \(.version) | \(.severity) | \(if .fixed == "" then "no fix yet" else .fixed end) |"' \
+              "$RUNNER_TEMP/rows.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Vulnerabilities with a fix: $fixable. Without a fix yet: $unfixed."
+          jq -r '.[] | "\(if .fixed == "" then "no fix  " else "FIXABLE " end) \(.id) \(.package) \(.version) (severity \(.severity))\(if .fixed == "" then "" else ", fixed in \(.fixed)" end)"' \
+            "$RUNNER_TEMP/rows.json" | sort
+          test "$fixable" -eq 0
+
+      # The runner has no .env, so one is written with throw-away values made here, masked so that
+      # they never show in the log. It is deleted at the end of the job.
+      - name: Write a throw-away configuration
+        run: |
+          umask 077
+          db=$(openssl rand -hex 24); ana=$(openssl rand -hex 24)
+          rui=$(openssl rand -hex 24); sara=$(openssl rand -hex 24)
+          for value in "$db" "$ana" "$rui" "$sara"; do echo "::add-mask::$value"; done
+          {
+            echo "MATRIZ_DB_NAME=matriz"
+            echo "MATRIZ_DB_USER=matriz"
+            echo "MATRIZ_DB_PASSWORD=$db"
+            echo "MATRIZ_DEMO_SEED=true"
+            echo "MATRIZ_DEMO_PASSWORD_ANA=$ana"
+            echo "MATRIZ_DEMO_PASSWORD_RUI=$rui"
+            echo "MATRIZ_DEMO_PASSWORD_SARA=$sara"
+            # The smoke test uses plain HTTP on localhost.
+            echo "MATRIZ_COOKIE_SECURE=false"
+          } > .env
+
+      - name: Start the application with Docker Compose
+        run: docker compose --profile app up --detach --wait --no-build
+
+      # The image, the application and data persistence (scripts/image-smoke-test.sh).
+      - name: Smoke test
+        run: scripts/image-smoke-test.sh
+
+      - name: Show the containers' logs
+        if: failure()
+        run: docker compose --profile app logs --no-color || true
+
+      - name: Remove the containers, the data and the configuration
+        if: always()
+        run: |
+          docker compose --profile app down --volumes || true
+          rm -f .env
