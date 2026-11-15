@@ -431,3 +431,54 @@ The test task was deleted, so the database was left as it was. The container was
 - `./mvnw verify` was not run: the new files are not part of the Maven build.
 - The amd64 image: it is built in CI, in step 3 of the plan.
 - The image wasn't scanned for known vulnerabilities in its operating system packages. No scanner is part of the approved tools.
+
+## 15. Running the whole application with Docker Compose
+
+On 2026-11-15 the application was added to `compose.yaml`, following step 2 of [delivery-plan.md](delivery-plan.md). Run on the developer's machine (arm64, Docker 29.1.3).
+
+**What changed:**
+- **`compose.yaml`:**
+  - **A new service, `app`:** in the Compose profile `app`, built from the `Dockerfile` as `matriz:local`.
+    - It starts only once `postgres` is healthy, and uses the image's own health check.
+    - It gets an explicit list of settings, not the whole `.env`: its own `MATRIZ_DB_URL` (to the `postgres` service), the database user and password, the demo seed and passwords, and `MATRIZ_COOKIE_SECURE`.
+    - It is published on `127.0.0.1:${MATRIZ_APP_PORT:-8080}`.
+    - It runs with no Linux capabilities, `no-new-privileges`, and a read-only file system apart from a `/tmp` in memory.
+  - **Both services:** on the network `matriz`, with `restart: unless-stopped`. PostgreSQL is published on `127.0.0.1` only (it was on every interface) and has `no-new-privileges`. The `matriz-postgres` volume is unchanged.
+- **`.env.example`:** adds `MATRIZ_APP_PORT`, and a note that the application container ignores `MATRIZ_DB_URL`.
+
+**Commands and results:**
+
+| Check | Command | Result |
+|---|---|---|
+| Valid file | `docker compose config --quiet` | Passes |
+| Services | `docker compose config --services`, without and with `--profile app` | `postgres` only; `postgres` and `app` |
+| Compatibility | `docker compose up -d --wait` | Only `postgres` starts, `healthy`, on `127.0.0.1:5432`. The existing data was kept |
+| Start-up | `MATRIZ_APP_PORT=8082 docker compose --profile app up -d --build --wait` | Both `healthy`. `app` started 28 s after `postgres`, once it was healthy. Logs: Flyway on `jdbc:postgresql://postgres:5432/matriz`, schema up to date, "Started MatrizApplication in 5.0 seconds". 0 lines with ERROR, WARN or FATAL |
+| Reachable | `curl http://localhost:8082/actuator/health`, `GET /` and its script | `UP`. The page and `assets/index-….js` answer 200 |
+| Communication | `docker network inspect matriz_matriz`, and `getent hosts postgres` inside `app` | Both containers on the network. `postgres` resolves to the database container |
+| Settings in `app` | `docker inspect` (variable names only) | The listed `MATRIZ_*` variables and the image's own (`JAVA_HOME`, `PATH`, locale). Not `MATRIZ_DB_NAME` nor `MATRIZ_APP_PORT` |
+| Least privilege | `docker inspect`, `/proc/1/status`, `touch` inside `app` | User 10001, every capability set empty, `no-new-privileges`. `/app` and `/opt` refuse writes ("Read-only file system"), `/tmp` accepts them |
+| Exposure | `docker compose --profile app ps` | `127.0.0.1:8082->8080` and `127.0.0.1:5432->5432` |
+| No secrets in files | Search of `compose.yaml` and `.env.example` | `compose.yaml` only refers to variables. `.env.example` has only the `change-me-…` examples |
+
+**Main features:** the same `curl` checks as in [section 14](#14-application-container-image): Ana logs in (200, `MATRIZ_SESSION`, `HttpOnly`), the projects are listed (200), a task without the CSRF header is refused (403), with it the task is created (201) and read back with the same title in "To do" (200), then it is deleted (204) and Ana logs out (204).
+
+**Data kept after recreating the containers:**
+
+| Step | Result |
+|---|---|
+| Create a task as Ana | 201 |
+| `docker compose --profile app down` (without `-v`) | Both containers and the network removed. The volume `matriz_matriz-postgres` stayed |
+| `docker compose --profile app up -d --wait` | Both `healthy`, with new container IDs. 0 lines with ERROR, WARN or FATAL |
+| Read the task back | 200, the same title |
+| Delete it, read again | 204, then 404 |
+
+The test tasks were deleted, so the database was left as it was. At the end the `app` service was removed and only `postgres` was left running, as before.
+
+**Environment:**
+- **Port 8080** is taken on this machine by `vagrant-vmware-utility`, and port 8081 by a local `java -jar` of the application, which was left running and stayed `UP`. So the checks set `MATRIZ_APP_PORT=8082` for the command, which also checks that the variable works. The local `.env` wasn't changed.
+- **The old network** `matriz_default`, from the earlier `compose.yaml`, was left behind empty. It isn't used any more.
+
+**Not checked:**
+- `./mvnw verify` was not run: the changes are not part of the Maven build. The end-to-end test starts its own PostgreSQL and doesn't use `compose.yaml`.
+- A log-in from a browser was not tried. The checks used `curl`, as in section 14.
