@@ -618,6 +618,7 @@ The 50 log lines written during the outage are all JSON: 48 WARN (the database h
 
 Afterwards the `app` service was removed and only `postgres` was left running, with its data. The local `java -jar` on port 8081 stayed `UP` throughout (it lost the database while it was stopped, like the container).
 
+**CI run:** [43777138671](https://github.com/vitorhsbarros/matriz/actions/runs/43777138671), on `a7c7b32` (`push` to `main`). Every job passed, and `publish` was skipped. In the `image` job, the scan found 0 vulnerabilities with a fix (179 without one), and the smoke test passed all 12 checks, among them "every log line is ECS JSON (37 lines)".
+
 **Not checked:**
 - **A log collector:** no log collector or platform was used. The format was checked line by line with `jq`.
-- **The CI run:** the CI run of this change isn't recorded yet. It will be the first `push` run after the commit.
