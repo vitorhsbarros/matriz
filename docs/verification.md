@@ -571,3 +571,53 @@ Afterwards the `app` service and the pulled image were removed, and the local ar
 - **A final release:** `latest` was checked only through the tag logic, not with a published final release.
 - **Provenance attestations:** the image isn't signed and has no attestation. Its source can be traced only through its labels and the run that published it.
 - **The credentials warning:** `docker login` warns that the credentials are stored unencrypted on the runner. The runner is thrown away after the job, and the job logs out after pushing.
+
+## 18. Observability: structured logs, liveness and readiness
+
+On 2026-11-15 the application got structured logs in its container image, and public liveness and readiness checks (Challenge B). No dependency was added: both are part of Spring Boot 4.1.2.
+
+**What changed:**
+- **`application.yaml`:** the health probes are enabled explicitly.
+  - **Liveness** (`/actuator/health/liveness`) is `livenessState` only. A database failure doesn't make it fail, so a platform doesn't restart the application for that.
+  - **Readiness** (`/actuator/health/readiness`) is `readinessState` and `db`: the application isn't ready while the database can't be reached.
+  - The details stay hidden.
+- **`SecurityConfig`:** `/actuator/health/liveness` and `/actuator/health/readiness` can be read without a session, besides `/actuator/health`. Nothing else is opened. Only the `health` endpoint is exposed, as before.
+- **`Dockerfile`:**
+  - `LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs`, so the container writes its logs as JSON lines in the Elastic Common Schema (ECS 8.11). It can be overridden at run time like any setting;
+  - the `HEALTHCHECK` now uses readiness.
+- **`scripts/image-smoke-test.sh`:** also checks that the three health URLs answer `UP` with no details, and that every line the application has logged is ECS JSON (`@timestamp`, `log.level`, `message`, `service.name`, `ecs.version`). It runs in the CI `image` job, as before.
+- **New test, `HealthChecksTest`:** the three health URLs answer 200 and `UP` without a session, with no `components` or `details`. `/actuator`, `/actuator/info`, `/actuator/env`, `/actuator/health/db` and `/actuator/health/diskSpace` answer 401.
+
+**Personal data in the logs, reviewed before the change:**
+- **The code:** the application code has no log statement (no logger, no `System.out`). Every log line comes from Spring, Hibernate, Flyway, Hikari or Tomcat.
+- **The output:** a failed log-in, a log-in, a task creation with a title and a description, a malformed body (400), an unknown task (404) and a deletion **wrote no log line at all**.
+- **The search:** the start-up log (29 lines, all INFO, with the demo seed on) has no email address, and no "password", "secret" or "token". The same searches for the email, both passwords, the session ID, the CSRF token, the task's title and description, and the malformed body found nothing.
+- **Findings:** none. The database host and name appear in Flyway's start-up line (`jdbc:postgresql://postgres:5432/matriz`). They aren't secret.
+
+**Commands and results:**
+
+| Check | Result |
+|---|---|
+| `./mvnw test -Dtest=HealthChecksTest` | 8 tests, 0 failures. Before the change, liveness and readiness answered 401 |
+| `./mvnw verify` | **BUILD SUCCESS** in 2 min 10 s: 221 back-end tests (213 + 8), 46 browser application tests, `ModularityTest`, and the end-to-end test: "1 passed" |
+| `docker compose --profile app up -d --wait`, then `scripts/image-smoke-test.sh` (port 8082) | `healthy`. **All 12 checks passed**, among them "/actuator/health, its liveness and its readiness answer UP, with no details" and "every log line is ECS JSON (29 lines)" |
+| The same with the logs switched to the Logstash format (a Compose override file outside the repository) | Exit code 1: "FAIL  every log line is ECS JSON (29 of 29 are not)" |
+| A local `java -jar` of the new JAR (port 8090) | Plain-text logs (0 JSON lines out of 50). Liveness and readiness `UP` |
+
+**Database down,** with `docker compose stop postgres` while `app` ran:
+
+| Time after stopping it | Readiness | Liveness | Container |
+|---|---|---|---|
+| +30 s, +65 s, +100 s | `DOWN`, **503**, after **30 s** each | `UP`, 200, at once | — |
+| +105 s | | | `unhealthy`, still running, 0 restarts |
+| `docker compose start postgres`, +2 s | `UP`, 200 | `UP` | `healthy` again |
+
+The 50 log lines written during the outage are all JSON: 48 WARN (the database health check, Hikari's "Connection is not available, request timed out after 30006ms", the health check that "took 30019ms to respond") and 2 ERROR (Spring Session's scheduled clean-up of expired sessions, which needs the database). None has an email address, password, secret or token.
+
+**Open point:** while the database is down, readiness takes **30 s** to answer, because the database check waits for Hikari's connection time-out (30 s by default). The image's health check gives up after 3 s and counts that as a failure, so the result is still right. A platform probing with a shorter time-out would see a time-out instead of a 503. A shorter connection time-out (e.g. `spring.datasource.hikari.connection-timeout`) would change that, but also how long a request waits for a connection under load. It wasn't changed: it is left for the developer to decide.
+
+Afterwards the `app` service was removed and only `postgres` was left running, with its data. The local `java -jar` on port 8081 stayed `UP` throughout (it lost the database while it was stopped, like the container).
+
+**Not checked:**
+- **A log collector:** no log collector or platform was used. The format was checked line by line with `jq`.
+- **The CI run:** the CI run of this change isn't recorded yet. It will be the first `push` run after the commit.
