@@ -382,3 +382,52 @@ On 2026-11-14 the CI workflow (`.github/workflows/ci.yml`) ran for the first tim
 - **Afterwards,** the branch was deleted locally and on GitHub. The failed run stays in the history as evidence.
 
 **Later runs:** each later run is recorded in the [GitHub Actions history](https://github.com/vitorhsbarros/matriz/actions/workflows/ci.yml), which is the evidence from now on. This section is updated only when the CI itself changes in a relevant way.
+
+## 14. Application container image
+
+On 2026-11-15 the application was put in a container image, following step 1 of [delivery-plan.md](delivery-plan.md). Built and run on the developer's machine (arm64, Docker 29.1.3).
+
+**Files:**
+- **`Dockerfile`:** two stages.
+  - **Build:** `eclipse-temurin:21.0.13_9-jdk-noble` runs `./mvnw package` without compiling or running the tests, which need Docker and run in CI.
+  - **Final:** `eclipse-temurin:21.0.13_9-jre-noble` with only the JAR. It runs as user 10001, exposes port 8080, and has a health check on `/actuator/health`.
+  - Both base images are pinned by the digest of their multi-platform index.
+- **`.dockerignore`:** an allow-list. Only the Maven wrapper, `pom.xml`, `src/main` and the browser application's sources reach the build. `.env`, `.git`, `target/`, `node_modules/` and the tests stay out.
+
+**Commands and results:**
+
+| Check | Command | Result |
+|---|---|---|
+| Build | `docker build -t matriz:local .` | Success, about 54 s on the first build (Maven 33 s, browser application included) |
+| Size | `docker images matriz:local` | 153 MB compressed, 541 MB on disk |
+| Build context | A throw-away build that lists what `COPY . ` receives | 110 files: `.mvn`, `frontend` (sources only), `mvnw`, `pom.xml`, `src/main`. No `.env`, `.git`, `target`, `node_modules`, `src/test`, `e2e` or test results |
+| Start-up | `docker run` on the Compose network (`matriz_default`), `MATRIZ_DB_URL` pointing to `postgres`, the other values from `.env` with `--env-file`, demo seed on, port `8082:8080` | `docker ps`: `Up (healthy)`. `docker logs`: Flyway "Schema "public" is up to date", "Started MatrizApplication in 3.8 seconds", 0 lines with ERROR or WARN |
+| Health | `curl http://localhost:8082/actuator/health` | `{"status":"UP"}` |
+| Empty database | The image against a throw-away PostgreSQL 17.10 with no data, without the demo seed | The six migrations applied ("now at version v4.1"), started, healthy |
+| Non-root user | `docker run --rm --entrypoint id matriz:local` | `uid=10001(matriz) gid=10001(matriz)` |
+| Read-only application | `ls -la /app`, then `touch /app/.env` as the application user | The JAR belongs to root, mode `r--r--r--`. The write is refused: "Permission denied" |
+| Contents | `find /` for `.env`, `*.java`, `pom.xml`, `package.json`, `node`, `npm`, `mvnw`, `.m2`, `javac`, `node_modules` | None found |
+| Secrets | `docker history --no-trunc` and `docker image inspect`, searched for `password`, `secret`, `change-me`, `MATRIZ_DB`, `MATRIZ_DEMO` | 0 matches. The image sets no application variable |
+
+**Behaviour kept:** checked with `curl` against the container, as the browser does:
+
+| Step | Expected | Observed |
+|---|---|---|
+| `GET /` and its script | The browser application | 200, the page and `assets/index-….js` (200, `text/javascript`) |
+| `POST /api/session` as Ana | Logged in, session cookie | 200, `MATRIZ_SESSION` set, `HttpOnly`. `Secure` is off because the local `.env` sets `MATRIZ_COOKIE_SECURE=false` for `http://localhost` |
+| `GET /api/projects` | Ana's projects | 200 |
+| Create a task without the CSRF header | Refused | 403 |
+| Create a task with the CSRF header | Created | 201 |
+| Read the task back | The same title, status "To do" | 200, the same title, `TODO` |
+| Delete the task, then log out | Clean-up | 204, 204 |
+
+The test task was deleted, so the database was left as it was. The container was then removed. The image and the database data were kept.
+
+**Differences from the plan:**
+- **Port:** the planned port 8081 was taken by a local `java -jar` of the application, which was left running, so the checks used 8082.
+- **Health check in the image:** the plan left it open (section 8). `curl` comes with the base image, so the image has one.
+
+**Not checked:**
+- `./mvnw verify` was not run: the new files are not part of the Maven build.
+- The amd64 image: it is built in CI, in step 3 of the plan.
+- The image wasn't scanned for known vulnerabilities in its operating system packages. No scanner is part of the approved tools.
