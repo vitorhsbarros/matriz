@@ -35,7 +35,7 @@ class TaskTitleRuleTest {
     @ParameterizedTest(name = "the title \"{0}\" is refused as missing")
     @ValueSource(strings = {"", " ", "   "})
     void anEmptyTitleOrOneWithOnlySpacesIsRequired(String title) {
-        assertRefusedWith(title, "Task title is mandatory.");
+        assertRefusedWith(title, "Task title is required.");
     }
 
     @ParameterizedTest(name = "a title of {0} characters is too short")
