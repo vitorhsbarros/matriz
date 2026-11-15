@@ -482,3 +482,43 @@ The test tasks were deleted, so the database was left as it was. At the end the 
 **Not checked:**
 - `./mvnw verify` was not run: the changes are not part of the Maven build. The end-to-end test starts its own PostgreSQL and doesn't use `compose.yaml`.
 - A log-in from a browser was not tried. The checks used `curl`, as in section 14.
+
+## 16. Continuous integration of the image
+
+On 2026-11-15 the CI workflow got a fifth job, **Image (build, scan and smoke test)**, following step 3 of [delivery-plan.md](delivery-plan.md). It runs only after the four jobs of [section 13](#13-continuous-integration-on-github-actions) have passed, and has `contents: read` only. Nothing is published.
+
+**What the job does:**
+1. **Build:** Buildx (`docker/setup-buildx-action` v4.4.1) and `docker/build-push-action` v7.4.0, approved on 2026-11-15 and pinned by commit, with the layers cached in GitHub Actions. The image is loaded on the runner (amd64) and pushed nowhere.
+2. **Scan:** the OSV-Scanner of the `sca` job, v2.7.0, run as the image its action uses, pinned by digest, over the saved image. The job fails on any vulnerability that already has a fix. The others are listed in the log and in the run's summary.
+3. **Configuration:** a `.env` with throw-away values made in the job (`openssl rand`), masked with `::add-mask::` and deleted at the end.
+4. **Smoke test:** `docker compose --profile app up --wait`, then `scripts/image-smoke-test.sh`, the checks of sections 14 and 15 as a script. It stops at the first failed check and names it.
+5. **Clean-up:** the containers' logs are printed only on failure. `docker compose down --volumes` and the deletion of `.env` always run.
+
+**Change to the image:** the first local scan found 3 vulnerabilities with a fix, all from one advisory, USN-9065-1 (glibc: `libc6`, `libc-bin`, `locales` 2.39-0ubuntu8.9, severity 7.0, fixed in 2.39-0ubuntu8.12). It was published on 2026-11-12, the day after the base image was built. With the developer's approval, the final stage of the `Dockerfile` now installs the Ubuntu security updates (`apt-get upgrade`). After that: 0 with a fix, 179 without one. The image grew from 153 MB to 165 MB compressed.
+
+**Local checks:**
+
+| Check | Result |
+|---|---|
+| `scripts/image-smoke-test.sh` against `docker compose --profile app` (port 8082), before and after the `Dockerfile` change | 11 checks passed, "All checks passed." |
+| The same with a wrong port (`MATRIZ_APP_PORT=8099`) | Exit code 1, "FAIL  /actuator/health answers UP" |
+| The same without the demo password (`ENV_FILE=/dev/null`) | Exit code 1, naming `MATRIZ_DEMO_PASSWORD_ANA` |
+| `actionlint` 1.7.12 on `ci.yml` | No findings |
+| The scan step's parsing, run on a local scan result | 3 fixable before the change (step fails), 0 after (step passes) |
+
+**Runs on GitHub:**
+
+| Run | Commit | Trigger | Result |
+|---|---|---|---|
+| [43771873110](https://github.com/vitorhsbarros/matriz/actions/runs/43771873110) | `762b477` on `main` | `push` | **All six jobs passed.** `image` started at 22:57:19, two seconds after the last check (`build`) ended, and took 2 min 01 s. Scan: "Vulnerabilities with a fix: 0. Without a fix yet: 179." Smoke test: the 11 checks passed |
+| [43772372001](https://github.com/vitorhsbarros/matriz/actions/runs/43772372001) | `eff9474`, one assertion in `TaskTitleRuleTest` expecting a wrong message | `pull_request` ([#1](https://github.com/vitorhsbarros/matriz/pull/1)) | **Failed, as expected.** `Build and tests`: 213 tests, 3 failures, all in `TaskTitleRuleTest`. The `test-reports` artefact (108 KB) was kept. `image` was **skipped**. The other four jobs passed |
+| [43772687062](https://github.com/vitorhsbarros/matriz/actions/runs/43772687062) | `c9e9598`, the assertion restored | `pull_request` (#1) | **All six jobs passed.** `image` took 1 min 36 s, with the cached layers |
+
+Pull request #1 was then closed without merging, and its branch `ci-image-gate-check` deleted locally and on GitHub. The runs stay in the history as evidence.
+
+**No secrets in the log:** the log of the `image` job on `main` (1,802 lines) has no 48-character hexadecimal value, the form of the generated passwords. The `.env` lines appear only as the step's source, with variable names.
+
+**Not checked:**
+- **The Java libraries in the image:** the scan sees only the Ubuntu packages. The libraries are inside the Spring Boot JAR, where OSV-Scanner doesn't look. They are the same as the Maven dependencies that the `sca` job scans on every run, through the SBOM. Extracting the JAR in the image would make them visible to this scan too. It was tried locally (93 Maven packages found, 0 vulnerabilities) and not kept, by the developer's decision, because it adds no coverage.
+- **The Java runtime:** Temurin is installed from an archive, not from an Ubuntu package, so neither scan sees it.
+- **The browser:** the smoke test uses `curl`. The end-to-end test in the browser runs in the `build` job, against the JAR.
