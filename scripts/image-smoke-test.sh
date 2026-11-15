@@ -5,9 +5,9 @@
 #   docker compose --profile app up -d --wait
 #   scripts/image-smoke-test.sh
 #
-# It checks the image (user, contents, file system, ports), the application (health, browser
-# application, log-in, CSRF, creating and reading a task) and that the data survives recreating the
-# containers. It stops at the first failed check and names it. The demo seed must be on.
+# It checks the image (user, contents, file system, ports), the application (health, liveness and
+# readiness, JSON logs, browser application, log-in, CSRF, creating and reading a task) and that the
+# data survives recreating the containers. It stops at the first failed check and names it. The demo seed must be on.
 #
 # Settings: MATRIZ_APP_PORT (default 8080) and ENV_FILE (default .env), which holds the demo password.
 # No secret is printed: the password goes to curl through a temporary file, removed at the end.
@@ -76,9 +76,21 @@ pass "both ports are published on 127.0.0.1 only"
 
 # --- The application -------------------------------------------------------------------------------
 
-status="$(request health "$BASE/actuator/health")"
-[ "$status" = 200 ] && [ "$(jq -r .status "$WORK/health")" = UP ] || fail "/actuator/health answers UP"
-pass "/actuator/health answers UP"
+for check in health health/liveness health/readiness; do
+  status="$(request probe "$BASE/actuator/$check")"
+  [ "$status" = 200 ] && [ "$(jq -r .status "$WORK/probe")" = UP ] || fail "/actuator/$check answers UP"
+  [ "$(jq 'has("components") or has("details")' "$WORK/probe")" = false ] \
+    || fail "/actuator/$check shows only its status"
+done
+pass "/actuator/health, its liveness and its readiness answer UP, with no details"
+
+# Every line the application writes is a JSON object in the Elastic Common Schema.
+docker logs "$APP" > "$WORK/logs" 2>&1
+[ -s "$WORK/logs" ] || fail "the application writes logs"
+not_ecs="$(jq -R -c 'fromjson? // null | select(type != "object" or ([."@timestamp", .log.level, .message,
+  .service.name, .ecs.version] | any(. == null)))' "$WORK/logs" | wc -l | tr -d ' ')"
+[ "$not_ecs" = 0 ] || fail "every log line is ECS JSON ($not_ecs of $(wc -l < "$WORK/logs" | tr -d ' ') are not)"
+pass "every log line is ECS JSON ($(wc -l < "$WORK/logs" | tr -d ' ') lines)"
 
 status="$(request page "$BASE/")"
 script="$(grep -o 'assets/index-[^"]*\.js' "$WORK/page" | head -1 || true)"

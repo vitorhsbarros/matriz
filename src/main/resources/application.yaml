@@ -45,6 +45,18 @@ management:
     web:
       exposure:
         include: health
+  endpoint:
+    health:
+      # /actuator/health/liveness: the application is running; a failed database doesn't make it fail,
+      # so a platform doesn't restart it for that. /actuator/health/readiness: it can serve requests,
+      # which needs the database. Both are public and show only their status (SecurityConfig).
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState, db
 
 matriz:
   demo:

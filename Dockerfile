@@ -49,9 +49,14 @@ COPY --from=build --chown=root:root --chmod=0444 /workspace/matriz.jar /app/matr
 USER 10001:10001
 EXPOSE 8080
 
-# Marks the container healthy once the application answers. curl comes with the base image. The port
-# is the one inside the container (SERVER_PORT, 8080 unless changed).
+# In the container the logs are JSON lines in the Elastic Common Schema, for a log collector; a run
+# outside the container keeps plain text. Overridable at run time like any setting.
+ENV LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs
+
+# Marks the container healthy once the application is ready to serve, which needs the database
+# (/actuator/health/readiness). curl comes with the base image. The port is the one inside the
+# container (SERVER_PORT, 8080 unless changed).
 HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=3 \
-    CMD curl --fail --silent --output /dev/null "http://localhost:${SERVER_PORT:-8080}/actuator/health" || exit 1
+    CMD curl --fail --silent --output /dev/null "http://localhost:${SERVER_PORT:-8080}/actuator/health/readiness" || exit 1
 
 ENTRYPOINT ["java", "-jar", "/app/matriz.jar"]

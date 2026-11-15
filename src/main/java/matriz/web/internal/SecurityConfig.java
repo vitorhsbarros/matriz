@@ -18,7 +18,8 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
  * Web entry access rules (04-solution-architecture.md, section 3.3; ADR-0002).
  *
  * <ul>
- *   <li>Public: the browser application's files, the health check and log-in ({@code POST /api/session}).
+ *   <li>Public: the browser application's files, the health check with its liveness and readiness checks, and
+ *       log-in ({@code POST /api/session}).
  *   <li>Everything else needs a valid session (NFR02, DoD02): otherwise {@code 401} "Please log in to continue.".
  *   <li>Every request that changes data needs the session's CSRF token in the {@code X-CSRF-Token} header
  *       (SEC07, DoD06). Log-in is exempt, because no session exists yet.
@@ -39,7 +40,8 @@ class SecurityConfig {
         http.authorizeHttpRequests(requests -> requests
                         // An error raised while handling a request keeps that request's own status.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers("/", "/index.html", "/assets/**", "/favicon.svg", "/actuator/health")
+                        .requestMatchers("/", "/index.html", "/assets/**", "/favicon.svg", "/actuator/health",
+                                "/actuator/health/liveness", "/actuator/health/readiness")
                         .permitAll()
                         .requestMatchers(paths.matcher(HttpMethod.POST, "/api/session")).permitAll()
                         .anyRequest().authenticated())
