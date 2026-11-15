@@ -1,20 +1,68 @@
-# Local PostgreSQL for development. Reads MATRIZ_DB_* from .env (copy .env.example).
+# Matriz with Docker Compose. Reads its values from .env (copy .env.example); no value is set here.
+#
+#   docker compose up -d --wait                 PostgreSQL only, for the application run on the host
+#   docker compose --profile app up -d --wait   PostgreSQL and the application (built from the Dockerfile)
+#   docker compose --profile app down           stops both and keeps the data (-v would delete it)
+#
+# Both ports are published on 127.0.0.1 only, so they can't be reached from other machines.
 services:
   postgres:
     image: postgres:17.10
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${MATRIZ_DB_NAME:?set MATRIZ_DB_NAME in .env}
       POSTGRES_USER: ${MATRIZ_DB_USER:?set MATRIZ_DB_USER in .env}
       POSTGRES_PASSWORD: ${MATRIZ_DB_PASSWORD:?set MATRIZ_DB_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - matriz-postgres:/var/lib/postgresql/data
+    networks:
+      - matriz
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  app:
+    profiles: [app]
+    build: .
+    image: matriz:local
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Only the settings the application needs (docs/delivery-plan.md, section 3), not the whole .env.
+    # MATRIZ_DB_URL in .env points to localhost, for the JAR run on the host; here the database is
+    # reached by its service name.
+    environment:
+      MATRIZ_DB_URL: jdbc:postgresql://postgres:5432/${MATRIZ_DB_NAME:?set MATRIZ_DB_NAME in .env}
+      MATRIZ_DB_USER: ${MATRIZ_DB_USER:?set MATRIZ_DB_USER in .env}
+      MATRIZ_DB_PASSWORD: ${MATRIZ_DB_PASSWORD:?set MATRIZ_DB_PASSWORD in .env}
+      MATRIZ_DEMO_SEED: ${MATRIZ_DEMO_SEED:-false}
+      MATRIZ_DEMO_PASSWORD_ANA: ${MATRIZ_DEMO_PASSWORD_ANA:-}
+      MATRIZ_DEMO_PASSWORD_RUI: ${MATRIZ_DEMO_PASSWORD_RUI:-}
+      MATRIZ_DEMO_PASSWORD_SARA: ${MATRIZ_DEMO_PASSWORD_SARA:-}
+      MATRIZ_COOKIE_SECURE: ${MATRIZ_COOKIE_SECURE:-true}
+    ports:
+      - "127.0.0.1:${MATRIZ_APP_PORT:-8080}:8080"
+    networks:
+      - matriz
+    # Least privilege: no Linux capabilities, no privilege escalation, and a read-only file system
+    # apart from /tmp, which Tomcat needs. The health check is the image's (Dockerfile).
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  matriz:
 
 volumes:
   matriz-postgres:
