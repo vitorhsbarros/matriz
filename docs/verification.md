@@ -522,3 +522,52 @@ Pull request #1 was then closed without merging, and its branch `ci-image-gate-c
 - **The Java libraries in the image:** the scan sees only the Ubuntu packages. The libraries are inside the Spring Boot JAR, where OSV-Scanner doesn't look. They are the same as the Maven dependencies that the `sca` job scans on every run, through the SBOM. Extracting the JAR in the image would make them visible to this scan too. It was tried locally (93 Maven packages found, 0 vulnerabilities) and not kept, by the developer's decision, because it adds no coverage.
 - **The Java runtime:** Temurin is installed from an archive, not from an Ubuntu package, so neither scan sees it.
 - **The browser:** the smoke test uses `curl`. The end-to-end test in the browser runs in the `build` job, against the JAR.
+
+## 17. Publishing the image to the GitHub Container Registry
+
+On 2026-11-15 the CI workflow started publishing the image when a GitHub release is published, following step 4 of [delivery-plan.md](delivery-plan.md) (Challenge C). It was shown with a test pre-release.
+
+**What changed in `ci.yml`:**
+- **Trigger:** `release: published`, besides `push`, `pull_request` and `workflow_dispatch`.
+- **`image` job:** the image gets the OCI labels `org.opencontainers.image.source`, `.revision` (the commit) and `.version` (the tag or branch). On a release only, the image saved for the scan, the one then tested, is kept as the artifact `image` for one day.
+- **New `publish` job:**
+  - It runs only on releases, after `image`, with `contents: read` and `packages: write`. It is the only job that can write packages.
+  - It downloads the artifact (`actions/download-artifact` v8.0.2, pinned by commit) and loads the image. It refuses a release tag that isn't a version (`vX.Y.Z` or `vX.Y.Z-suffix`).
+  - It logs in to `ghcr.io` with the workflow's `GITHUB_TOKEN` through `--password-stdin`, pushes the tags, then logs out. No secret is stored.
+  - Tags: the version without the `v`, and `sha-<commit>`. `latest` only for a release that isn't a pre-release.
+  - It writes the digest and the tags to the run's summary.
+
+**Local checks:**
+
+| Check | Result |
+|---|---|
+| `actionlint` 1.7.12 | No findings. Only `publish` has `packages: write` (and only `sast-codeql` has `security-events: write`, as before) |
+| The tag logic in bash 5.2 | `v1.1.0-rc.1` (pre-release) → `1.1.0-rc.1`, `sha-762b477`; `v1.1.0` → the same plus `latest`; `release-1` → refused |
+
+**Runs on GitHub:**
+
+| Run | Trigger | Result |
+|---|---|---|
+| [43774189361](https://github.com/vitorhsbarros/matriz/actions/runs/43774189361), `532bad8` | `push` to `main` | Every job passed. **`publish` was skipped.** No image artifact. The only artifact is Buildx's build record (`.dockerbuild`, 38 KB), which holds no image |
+| [43774611918](https://github.com/vitorhsbarros/matriz/actions/runs/43774611918), `532bad8` | `release`, [v1.1.0-rc.1](https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.0-rc.1) (pre-release) | Every job passed. `image` started after the four checks, and `publish` started at 23:28:45, after `image` (35 s). "Published ghcr.io/vitorhsbarros/matriz@sha256:4f7eed18…d5 as: …:1.1.0-rc.1 …:sha-532bad8". The log has no token (`ghs_`: 0 matches) |
+
+**The published package** ([ghcr.io/vitorhsbarros/matriz](https://github.com/users/vitorhsbarros/packages/container/package/matriz)):
+
+| Check | Result |
+|---|---|
+| Visibility and link | **Public**, as the repository, and linked to `vitorhsbarros/matriz` |
+| Tags | `1.1.0-rc.1` and `sha-532bad8` on one version. No `latest`, as expected for a pre-release |
+| Pull without logging in | `docker pull --platform linux/amd64 ghcr.io/vitorhsbarros/matriz:1.1.0-rc.1` succeeds |
+| Same image | The pulled digest is `sha256:4f7eed188d33aeb01aedfb817480a2201a96990fa9e620455d0ca94c905167d5`, the one in the run's summary |
+| Traceability | Labels: `source=https://github.com/vitorhsbarros/matriz`, `revision=532bad818dbd135ae4cdd7f18d4c8893baffda3c`, `version=v1.1.0-rc.1`. Architecture amd64, user 10001 |
+| It runs | Tagged as `matriz:local` and started with `docker compose --profile app up --wait --no-build` (amd64 under emulation on the arm64 Mac, started in 14.9 s). `scripts/image-smoke-test.sh`: all 11 checks passed |
+
+Afterwards the `app` service and the pulled image were removed, and the local arm64 image was built again. Only `postgres` was left running, as before.
+
+**Kept:** the pre-release `v1.1.0-rc.1`, its tag, and the package version, as the evidence of this check.
+
+**Not checked:**
+- **arm64:** the published image is amd64 only. Multi-platform images are out of scope.
+- **A final release:** `latest` was checked only through the tag logic, not with a published final release.
+- **Provenance attestations:** the image isn't signed and has no attestation. Its source can be traced only through its labels and the run that published it.
+- **The credentials warning:** `docker login` warns that the credentials are stored unencrypted on the runner. The runner is thrown away after the job, and the job logs out after pushing.

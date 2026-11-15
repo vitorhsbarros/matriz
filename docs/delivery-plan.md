@@ -89,8 +89,9 @@ Two containers:
 
 - **A new `image` job**, after `build`. It builds the image with Buildx, with the cache in `type=gha`, then a smoke test: start Compose with the `app` profile and check that `/actuator/health` answers `UP`.
 - **Publication to the GitHub Container Registry (`ghcr.io`)**, approved by the user (2026-11-15):
-  - only on pushes to `main` and on version tags, never on pull requests;
-  - tagged with the commit SHA, and with the version on a version tag;
+  - only when a GitHub release is published, never on pushes, pull requests or manual runs. Changed from "pushes to `main` and version tags" when it was implemented (Challenge C, 2026-11-15), so that only a release publishes;
+  - the image published is the one the `image` job built, scanned and tested, not a new build;
+  - tagged with the version and the commit SHA, and with `latest` only for a release that is not a pre-release;
   - `packages: write` only in the job that publishes;
   - logged in with the workflow's `GITHUB_TOKEN`, no stored secret.
 
@@ -108,10 +109,10 @@ Two containers:
 
 ## 7. Implementation steps
 
-1. **Image:** `.dockerignore` and `Dockerfile`. Build locally, run it with the database, and check the health endpoint, the non-root user, that there is no `.env` in the image, and the image size.
-2. **Compose:** the `app` service with its profile. Run `docker compose --profile app up`, check the health endpoint and a demo log-in, and check that the data survives a restart.
-3. **CI:** the `image` job with the smoke test, without publishing.
-4. **Publication:** the push to `ghcr.io` from `main` and version tags.
+1. **Image:** `.dockerignore` and `Dockerfile`. Build locally, run it with the database, and check the health endpoint, the non-root user, that there is no `.env` in the image, and the image size. **Done** (verification.md §14).
+2. **Compose:** the `app` service with its profile. Run `docker compose --profile app up`, check the health endpoint and a demo log-in, and check that the data survives a restart. **Done** (verification.md §15).
+3. **CI:** the `image` job with the smoke test, without publishing. **Done**, with an image scan added (verification.md §16).
+4. **Publication:** the push to `ghcr.io` when a release is published. **Done**, shown with the pre-release `v1.1.0-rc.1` (verification.md §17).
 5. **Documentation and records:** README, AGENTS.md, architecture.md and verification.md.
 
 Each step is checked before the next one starts.
