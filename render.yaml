@@ -1,0 +1,60 @@
+# Render Blueprint for Matriz (PD13, docs/deployment-options.md): the application and its PostgreSQL, on
+# Render's free plan, in Frankfurt. In Render: New > Blueprint > this repository, enter the three demo
+# passwords when asked, then Apply (README.md, "Deploying to Render").
+#
+# No secret is written here. The database credentials come from the database itself, and the demo
+# passwords are asked for once, in Render's dashboard (sync: false).
+# Specification: https://render.com/docs/blueprint-spec
+
+databases:
+  - name: matriz-db
+    plan: free                   # 1 GB, no backups, expires 30 days after it is created
+    region: frankfurt
+    postgresMajorVersion: "17"   # the version used in development and in the tests
+    databaseName: matriz
+    user: matriz
+    ipAllowList: []              # no connection from outside Render; the application connects privately
+
+services:
+  - type: web
+    name: matriz
+    # The image CI built, scanned, tested and attested for the release, pulled from the public registry.
+    # A new version is deployed by changing the tag here and syncing the Blueprint, or by a manual deploy.
+    runtime: image
+    image:
+      url: ghcr.io/vitorhsbarros/matriz:1.2.0
+    plan: free                   # sleeps after 15 minutes without traffic, about a minute to wake up
+    region: frankfurt
+    healthCheckPath: /actuator/health/readiness
+    envVars:
+      # Render sends requests to the port in PORT; the application listens on SERVER_PORT, 8080 by default.
+      - key: PORT
+        value: "8080"
+      # Render's internal connection string (postgresql://…); the application turns it into a JDBC URL.
+      - key: MATRIZ_DB_URL
+        fromDatabase:
+          name: matriz-db
+          property: connectionString
+      - key: MATRIZ_DB_USER
+        fromDatabase:
+          name: matriz-db
+          property: user
+      - key: MATRIZ_DB_PASSWORD
+        fromDatabase:
+          name: matriz-db
+          property: password
+      # The demo accounts and projects, created at start-up when missing (README.md, "Demo accounts").
+      - key: MATRIZ_DEMO_SEED
+        value: "true"
+      - key: MATRIZ_DEMO_PASSWORD_ANA
+        sync: false
+      - key: MATRIZ_DEMO_PASSWORD_RUI
+        sync: false
+      - key: MATRIZ_DEMO_PASSWORD_SARA
+        sync: false
+      # Render serves HTTPS, so the session cookie stays Secure.
+      - key: MATRIZ_COOKIE_SECURE
+        value: "true"
+      # The free instance has 512 MB; by default the JVM would use only a quarter of it.
+      - key: JAVA_TOOL_OPTIONS
+        value: "-XX:MaxRAMPercentage=75"
