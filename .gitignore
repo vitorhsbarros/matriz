@@ -17,3 +17,6 @@ frontend/playwright-report/
 *.swp
 .vscode/
 .DS_Store
+
+# Presenter-only notes for the final presentation, kept out of the repository.
+docs/presentation/speaker-notes.md

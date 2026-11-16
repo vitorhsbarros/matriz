@@ -74,6 +74,7 @@ The versions are the ones the build uses, from `pom.xml` (and Spring Boot's mana
 | [docs/release-notes/](docs/release-notes/) | Release notes of each version since `v1.1.0`, with the version number reasoning and the known issues. |
 | [docs/deployment-options.md](docs/deployment-options.md) | The deployment platforms compared for PD13, decided on 2026-11-16: Render. |
 | [docs/delivery-plan.md](docs/delivery-plan.md) | Delivery plan: the analysis behind the container image, Docker Compose and the CI workflow, the steps, and the "Delivery" section of the current version. |
+| [docs/presentation/](docs/presentation/index.html) | The final presentation (5 minutes, in Portuguese): an offline HTML slide deck with speaker notes and a timer, and the [demo script](docs/presentation/demo-script.md). |
 | [docs/final-validation.md](docs/final-validation.md) | Final validation of the delivery: the requirements met, the problems found and the limitations still open. |
 | [docs/verification.md](docs/verification.md) | Verification of the MVP: for each scenario, the expected result, the observed result and the evidence (tests, screenshots in [docs/verification/](docs/verification/), database checks), and how the data survives restarts. |
 | [docs/reviews/](docs/reviews/) | Critical reviews of the documentation, with the decisions taken on each finding. |
