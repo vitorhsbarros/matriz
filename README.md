@@ -111,7 +111,7 @@ The versions are the ones the build uses, from `pom.xml` (and Spring Boot's mana
   - JSON logs in the container, and public liveness and readiness checks.
 
   It was released as `v1.1.0`, then `v1.1.1` solved its open points. The current version is the Git tag **`v1.2.0`** on the branch `main`, published as the image `ghcr.io/vitorhsbarros/matriz:1.2.0`: ready to deploy on Render ([release notes](docs/release-notes/v1.2.0.md)). The [release notes of `v1.1.0`](docs/release-notes/v1.1.0.md) and the [CHANGELOG](CHANGELOG.md) say what changed; what wasn't run and what is still open is listed in [docs/delivery-plan.md, "Delivery"](docs/delivery-plan.md#10-delivery).
-- **Deployment:** on Render, with its PostgreSQL (PD13, [docs/deployment-options.md](docs/deployment-options.md)), described in [render.yaml](render.yaml); see [Deploying to Render](#deploying-to-render).
+- **Deployment:** online at **https://matriz-2s4n.onrender.com**, on Render with its PostgreSQL (PD13, [docs/deployment-options.md](docs/deployment-options.md)), described in [render.yaml](render.yaml); see [Deploying to Render](#deploying-to-render). On Render's free plan it sleeps after 15 minutes without traffic, and takes about a minute to wake up.
 
 ## Running the application
 

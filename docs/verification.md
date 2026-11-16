@@ -720,3 +720,57 @@ On 2026-11-16, at the developer's request, the open points of `v1.1.0` ([deliver
 Afterwards the `app` service and the pulled images were removed, the local arm64 image was built again, and only `postgres` was left running.
 
 **Still open:** PD13 (compared in [deployment-options.md](deployment-options.md), not decided), the image for amd64 only, and the Java runtime outside both scans.
+
+## 21. Deployment on Render
+
+On 2026-11-16 Matriz was deployed on Render (PD13), for the final presentation: **https://matriz-2s4n.onrender.com**.
+
+**How:**
+- **Release `v1.2.0`:**
+  - `MATRIZ_DB_URL` accepts a PostgreSQL connection string, which Render gives;
+  - [render.yaml](../render.yaml), the Blueprint: a free PostgreSQL 17 and a free web service, run from the image `ghcr.io/vitorhsbarros/matriz:1.2.0`, both in Frankfurt.
+- **The developer, in Render's dashboard:**
+  - connected GitHub;
+  - New → Blueprint, then this repository;
+  - entered the three demo passwords, then Apply.
+- **The assistant** had no access to the Render account, and saw no password.
+
+**Render's documentation checked** (2026-11-16):
+- [the free plan](https://render.com/docs/free);
+- [the Blueprint specification](https://render.com/docs/blueprint-spec);
+- [web services and their port](https://render.com/docs/web-services);
+- [deploying an image](https://render.com/docs/deploying-an-image).
+
+`render.yaml` was also checked against Render's JSON schema (`https://render.com/schema/render.yaml.json`): every key and value it uses is in the schema, whose objects refuse unknown keys. The schema allows `host` and `port` in `fromDatabase`, which the specification page doesn't list; the connection string was used, as the plan was made from the page.
+
+**Local checks before the release:**
+
+| Check | Result |
+|---|---|
+| `./mvnw clean verify` | BUILD SUCCESS: 232 back-end tests (11 new, `PostgresUrlEnvironmentPostProcessorTest`), 46 browser application tests, the end-to-end test |
+| The image with `MATRIZ_DB_URL=postgresql://postgres/matriz` and the user and password apart (Render's way) | `healthy`, Flyway on `jdbc:postgresql://postgres:5432/matriz` |
+| The image with the credentials only inside the connection string | `healthy` |
+| The image with an invalid connection string | Start-up stopped: "MATRIZ_DB_URL is not a valid JDBC URL or PostgreSQL connection string … Its value is not shown because it may contain a password." The password appears 0 times in the logs |
+| `scripts/image-smoke-test.sh`, local mode | All checks passed |
+| Remote mode over plain HTTP | Refused: "FAIL  BASE_URL uses HTTPS" |
+| Semgrep `p/secrets` on the 9 changed files | 0 findings |
+
+**CI and release:**
+- **Push run** [43924302207](https://github.com/vitorhsbarros/matriz/actions/runs/43924302207) on `1df6aab`: the first attempt failed in `npm ci`, because the connection to the npm registry was reset (`ECONNRESET`) before any test ran. The second attempt passed every job.
+- **Release** [v1.2.0](https://github.com/vitorhsbarros/matriz/releases/tag/v1.2.0) and its run [43926111311](https://github.com/vitorhsbarros/matriz/actions/runs/43926111311): every job passed. The image was published as `1.2.0`, `sha-1df6aab` and `latest` (`sha256:34435b92…d801`). `gh attestation verify` checks it: built at `refs/tags/v1.2.0` from `1df6aab`.
+
+**The deployment, checked from outside** (2026-11-16):
+
+| Check | Result |
+|---|---|
+| `/actuator/health`, `/liveness`, `/readiness` | 200, `UP`, about 0.1 s (the service was awake) |
+| `/` and its script | 200, `text/html` and `text/javascript` |
+| HTTPS | TLS 1.3 over HTTP/2. Certificate for `onrender.com` by Google Trust Services (WE1), valid until 2026-12-20, verified. `http://` answers 301 to `https://` |
+| Security headers | `Strict-Transport-Security: max-age=31536000 ; includeSubDomains`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Cache-Control: no-cache, no-store …`. HSTS appears here and not locally over HTTP, so the application sees the requests as secure behind Render's proxy: no `server.forward-headers-strategy` was needed |
+| `/api/projects` without a session | 401, "Please log in to continue." |
+| `BASE_URL=https://matriz-2s4n.onrender.com scripts/image-smoke-test.sh`, run by the developer with Ana's password in the environment | **All 7 checks passed:** the health checks, the page, Ana's log-in, a `Secure` and `HttpOnly` session cookie, 403 without the CSRF header, a task created, read back and deleted |
+| In a browser, by the developer | Sara logs in and her dashboard is empty, since she is in no project. Ana creates a task in *Website* |
+
+**Not checked:**
+- the time to wake up after 15 minutes without traffic (Render documents about a minute);
+- the free database's expiry, 30 days after it was created.

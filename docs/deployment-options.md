@@ -54,6 +54,10 @@ Render's free plan, checked in [its documentation](https://render.com/docs/free)
 - Moving to Neon later changes the same three variables only.
 - The first visit after 15 minutes without traffic waits about a minute: open the application shortly before presenting.
 
+## Deployed
+
+On 2026-11-16 Matriz was deployed on Render with [render.yaml](../render.yaml), at **https://matriz-2s4n.onrender.com**, from the image `ghcr.io/vitorhsbarros/matriz:1.2.0` ([verification.md §21](verification.md#21-deployment-on-render)). How to set it up, and the free plan's limits, are in [README.md, "Deploying to Render"](../README.md#deploying-to-render).
+
 ## Once chosen
 
 1. Record the decision as PD13 in [constraints.md, section 4](constraints.md#4-pending-decisions) and [implementation-plan.md, section 1.3](implementation-plan.md#13-pending-technical-decisions).
