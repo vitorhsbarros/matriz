@@ -622,3 +622,55 @@ Afterwards the `app` service was removed and only `postgres` was left running, w
 
 **Not checked:**
 - **A log collector:** no log collector or platform was used. The format was checked line by line with `jq`.
+
+## 19. Release v1.1.0
+
+On 2026-11-16 the Lab 05 delivery was released as `v1.1.0` ([docs/delivery-plan.md, "Delivery"](delivery-plan.md#10-delivery)).
+
+**Documented commands, run as written** before the release, with `MATRIZ_APP_PORT=8082` because ports 8080 and 8081 are taken on this machine:
+
+| Command (README "Running with Docker", AGENTS.md §10) | Result |
+|---|---|
+| `docker compose --profile app build` | `matriz:local  Built` |
+| `docker compose --profile app up -d --wait` | `postgres` and `app` `Healthy` |
+| `/actuator/health`, `/liveness`, `/readiness` | 200, `UP`. `/actuator/health` also lists the groups `liveness` and `readiness`, as the README says |
+| `docker compose logs app`, and `docker compose logs --no-log-prefix app \| jq -r .message` | ECS JSON lines; the second shows only the messages ("Starting MatrizApplication v0.1.0-SNAPSHOT …") |
+| `scripts/image-smoke-test.sh` | "All checks passed." (12 checks) |
+| `docker compose --profile app down`, then `docker compose up -d --wait` | Both containers removed, the volume kept. Only `postgres` started again, with its data (3 users) |
+
+**Runs and release:**
+
+| What | Result |
+|---|---|
+| Push run [43785032983](https://github.com/vitorhsbarros/matriz/actions/runs/43785032983), `84b45ca` | Every job passed. `publish` skipped |
+| Tag `v1.1.0` and release [v1.1.0](https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.0) (final, latest) | The tag points to `28b0bc9`, the commit that adds the changelog, the release notes and the "Delivery" section |
+| Release run [43785057302](https://github.com/vitorhsbarros/matriz/actions/runs/43785057302) | Every job passed. `image` ran after the four checks, `publish` after `image`. "Published ghcr.io/vitorhsbarros/matriz@sha256:221e9dc0…70c5 as: …:1.1.0 …:sha-28b0bc9 …:latest". No token in the log (`ghs_`: 0) |
+
+**The published image:**
+
+| Check | Result |
+|---|---|
+| Package versions | `sha256:221e9dc087037fc425ba492bc43edc6944a1655bf50750e4776ff50dafc570c5`: `1.1.0`, `sha-28b0bc9`, `latest`. The pre-release keeps its own version (`1.1.0-rc.1`, `sha-532bad8`) |
+| `docker pull ghcr.io/vitorhsbarros/matriz:1.1.0`, as in the README, without logging in | Succeeds on the arm64 Mac without `--platform`: the amd64 image, the only one, is fetched |
+| Digest and labels | The pulled digest is the one in the run's summary, and so is `latest`'s. `revision=28b0bc906e83216e190464933f3750d7b36141e7`, `version=v1.1.0` |
+| `docker tag … matriz:local`, `docker compose --profile app up -d --wait --no-build`, then `scripts/image-smoke-test.sh` | `Healthy`, and all 12 checks passed under emulation |
+
+Afterwards the `app` service and the pulled images were removed, the local arm64 image was built again, and only `postgres` was left running.
+
+**The release was published twice.** It was first tagged on `3425dbe` (run [43778979924](https://github.com/vitorhsbarros/matriz/actions/runs/43778979924), digest `d73fe1ed…`). For exercise 5, the three last commits were rebuilt on `a6e40f6` as "Lab 05, exercise 5" with the changelog and the release notes added, and `main` was force-pushed with the developer's approval. The release and the tag `v1.1.0` were then deleted and created again on `28b0bc9`, so CI published the image again (above). The earlier image version, left with only the tag `sha-3425dbe` of a commit no longer on `main`, was deleted from the package, with the developer's approval.
+
+**The API documentation checked against the code** (Lab 05, exercise 5), against the application in Docker Compose with the demo accounts:
+
+| Check | Result |
+|---|---|
+| Operations: method and path of every operation in `openapi.yaml` and of every controller mapping | The same 30 operations on both sides |
+| Success status of every operation (`201` and `204` from the code's annotations, `200` otherwise) | The same in all 30 |
+| `401` without a session (a wrong password for `POST /api/session`) | All 30 operations |
+| `404` with ids that don't exist | All 23 operations that document it |
+| `400` with a malformed JSON body | All 12 operations that document it |
+| `403` without the CSRF header | All 20 operations that document it, "The request could not be verified. Please reload and try again." |
+| `403` for a member who isn't the manager or the author (Rui) | All 10 operations that document it, with the messages of the user stories |
+| `422` with invalid data | All 15 operations that document it, with the messages of the user stories |
+| `409` | All 4 operations, with the messages of the user stories. Each is also covered by a test: `MembersApiTest.someoneWhoIsAlreadyAMemberIsRefused`, `TeamsApiTest.aNameAlreadyInUseIsRefusedIgnoringCaseAndSpaces`, `TeamsApiTest.renameErrors` and `TeamsApiTest.memberErrors` |
+
+112 requests, no difference from `openapi.yaml`. The tasks, comment and teams created for the check were deleted.
