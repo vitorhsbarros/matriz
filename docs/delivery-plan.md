@@ -113,7 +113,7 @@ Two containers:
 2. **Compose:** the `app` service with its profile. Run `docker compose --profile app up`, check the health endpoint and a demo log-in, and check that the data survives a restart. **Done** (verification.md §15).
 3. **CI:** the `image` job with the smoke test, without publishing. **Done**, with an image scan added (verification.md §16).
 4. **Publication:** the push to `ghcr.io` when a release is published. **Done**, shown with the pre-release `v1.1.0-rc.1` (verification.md §17).
-5. **Documentation and records:** README, AGENTS.md, architecture.md and verification.md.
+5. **Documentation and records:** README, AGENTS.md, architecture.md and verification.md. **Done**, released as `v1.1.0` (section 10).
 
 Each step is checked before the next one starts.
 
@@ -133,4 +133,35 @@ Each step is checked before the next one starts.
 Found during the analysis and reported to the user:
 - [architecture.md §5](architecture.md#5-technology-stack) says "Spring Data JPA for data access", but there are no `@Entity` classes, and data access uses `JdbcClient`. JPA only validates the schema (`ddl-auto: validate`). Not corrected.
 - The same section said "Spring Boot Test with MockMvc", but the API tests send real HTTP requests and don't use MockMvc. Corrected in the document at the user's request (2026-11-15). The tests didn't change.
-- "Packaging" mentions one container image, which doesn't exist yet. Step 1 resolves it.
+- "Packaging" mentioned one container image, which didn't exist yet. Resolved by step 1, and the line now describes the image (2026-11-16).
+
+## 10. Delivery
+
+- **Version:** Git tag `v1.1.0` on the branch `main`, released on GitHub as [v1.1.0](https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.0). The tag marks the commit that adds this section. It is a minor release over `v1.0.1`: the application's behaviour is the same, plus the delivery below and two public health checks. A test pre-release, [v1.1.0-rc.1](https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.0-rc.1), was published first to check the publication, and is kept.
+- **Release notes and changelog:** [release-notes/v1.1.0.md](release-notes/v1.1.0.md), with the Semantic Versioning reasoning, and [CHANGELOG.md](../CHANGELOG.md).
+- **Image:** published by CI from the release as `ghcr.io/vitorhsbarros/matriz:1.1.0`, `:sha-<commit>` and `:latest` ([package](https://github.com/users/vitorhsbarros/packages/container/package/matriz)). The check of the published image is recorded in [verification.md](verification.md), after the tag.
+
+**What it contains:**
+
+| Part | What | Evidence |
+|---|---|---|
+| Container image | Multi-stage `Dockerfile` and allow-list `.dockerignore`. A Java 21 runtime and the JAR, run as a non-root user on a read-only JAR, with Ubuntu security updates | [verification.md §14](verification.md#14-application-container-image), [§16](verification.md#16-continuous-integration-of-the-image) |
+| Docker Compose | `compose.yaml`: the `app` service in the `app` profile, started once PostgreSQL is healthy. Ports on `127.0.0.1`, no capabilities, read-only file system. `.env.example` gains `MATRIZ_APP_PORT` | [§15](verification.md#15-running-the-whole-application-with-docker-compose) |
+| CI | The `image` job, after the tests, SAST and SCA: build, image scan (OSV-Scanner, failing on fixable vulnerabilities), smoke test with Compose (`scripts/image-smoke-test.sh`). Shown failing on a broken test (pull request #1, closed) | [§16](verification.md#16-continuous-integration-of-the-image) |
+| Publication | The `publish` job, on releases only, with `packages: write` only there and the `GITHUB_TOKEN`. It pushes the tested image, not a new build | [§17](verification.md#17-publishing-the-image-to-the-github-container-registry) |
+| Observability | ECS JSON logs in the container, plain text outside it. Public `/actuator/health/liveness` and `/actuator/health/readiness`, readiness with the database. The image's health check uses readiness | [§18](verification.md#18-observability-structured-logs-liveness-and-readiness) |
+| Documentation | README ("Technologies", "Running with Docker", CI, status), AGENTS.md §10, architecture.md §5 with the delivery diagram, `openapi.yaml` checked against the code (30 operations), `CHANGELOG.md`, the release notes, and this plan | — |
+
+**Deliverables, checked on 2026-11-16:** `Dockerfile`, `.dockerignore`, `compose.yaml`, `.env.example`, `.github/workflows/ci.yml` and `scripts/image-smoke-test.sh` are in the repository. The evidence is in verification.md §14 to §18, and the prompts used are in `docs/prompts/` (`delivery-analysis.md`, `containerisation.md`, `compose.md`, `ci-image.md`, `image-release.md`, `observability.md`, `delivery-v1.1.0.md`, `technical-documentation.md`). `CHANGELOG.md` and `docs/release-notes/v1.1.0.md` are at their paths.
+
+**Not run:**
+- The deployment to a hosting platform: PD13 is still pending, so the image is published but runs nowhere.
+- The image on arm64: it is built for `linux/amd64` only. On the developer's arm64 Mac it was run under emulation.
+- A final release's `latest` tag is first checked with this release, after the tag (verification.md).
+
+**Open points:**
+- **PD13**, the deployment platform, with what depends on it (section 8): TLS and forwarded headers, the production database and its backups, the secret store.
+- **Readiness while the database is down** answers after 30 s, Hikari's connection time-out (verification.md §18). It is still right for the image's health check. A shorter time-out was left for the developer to decide.
+- **Supply chain:** the image has no signature or provenance attestation, and the scan doesn't see the Java runtime (verification.md §16, §17).
+- **Version numbers:** `pom.xml` still says `0.1.0-SNAPSHOT`, which the JAR's name and the logs' `service.version` show, while the release is `v1.1.0`. It was the same for `v1.0.1`. Not changed.
+- **Documents and code:** architecture.md §5 says "Spring Data JPA for data access", while the code uses `JdbcClient` (section 9). Not changed.
