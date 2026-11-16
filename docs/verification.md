@@ -703,3 +703,20 @@ On 2026-11-16, at the developer's request, the open points of `v1.1.0` ([deliver
 | `scripts/image-smoke-test.sh` | All 12 checks passed |
 | `docker compose stop postgres` | Readiness `DOWN` 503 in 0.02 s (the pool's connections failed at once), then in **5.03 s**; liveness `UP` 200; the container turned `unhealthy`. After `docker compose start postgres`: readiness `UP`, `healthy` |
 | `actionlint` | No findings. Write permissions: `security-events` in `sast-codeql`; `packages`, `id-token` and `attestations` in `publish` only |
+
+**Runs, release and published image:**
+
+| Check | Result |
+|---|---|
+| Push run [43788006059](https://github.com/vitorhsbarros/matriz/actions/runs/43788006059), `ef0975e` | Every job passed. `publish` skipped |
+| Tag `v1.1.1` and release [v1.1.1](https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.1) (final, latest) | The tag points to `ef0975e`, the commit with the changelog and the release notes |
+| Release run [43788641658](https://github.com/vitorhsbarros/matriz/actions/runs/43788641658) | Every job passed. In `publish`: the push, "Attestation created for ghcr.io/vitorhsbarros/matriz@sha256:820fcecb…b7da" with its entry in Sigstore's public log, and the log-out. No token in the log (`ghs_`: 0) |
+| `gh attestation verify oci://ghcr.io/vitorhsbarros/matriz:1.1.1 -R vitorhsbarros/matriz` | Exit code 0. SLSA provenance v1 of `sha256:820fcecb…b7da`, signed through `https://token.actions.githubusercontent.com`, built by `.github/workflows/ci.yml@refs/tags/v1.1.1` from `ef0975ee1d5603c2e8308dcc648e7331be2ea770`, in run 43788641658 |
+| The same with another repository (`-R vitorhsbarros/not-matriz`), and on `1.1.0`, published before the attestation existed | Both refused (no attestation found) |
+| Package versions | `sha256:820fcecb046131140ac4d380a5a4a492af0361ba140273c732fe694f82a0b7da`: `1.1.1`, `sha-ef0975e`, `latest`. `1.1.0` and `1.1.0-rc.1` keep their own versions. Two more versions hold the attestation in the registry: one tagged `sha256-820fcecb…`, one untagged |
+| `docker pull ghcr.io/vitorhsbarros/matriz:1.1.1`, `docker tag … matriz:local`, `docker compose --profile app up -d --wait --no-build` (port 8082) | The digest of the run's summary, and so is `latest`'s. Labels `revision=ef0975e…`, `version=v1.1.1`. "Starting MatrizApplication v1.1.1", `service.version` `1.1.1`. Started in 9.9 s, under amd64 emulation |
+| `scripts/image-smoke-test.sh` on it | All 12 checks passed |
+
+Afterwards the `app` service and the pulled images were removed, the local arm64 image was built again, and only `postgres` was left running.
+
+**Still open:** PD13 (compared in [deployment-options.md](deployment-options.md), not decided), the image for amd64 only, and the Java runtime outside both scans.
