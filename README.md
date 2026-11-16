@@ -110,8 +110,8 @@ The versions are the ones the build uses, from `pom.xml` (and Spring Boot's mana
   - publication of that image to `ghcr.io` on each release;
   - JSON logs in the container, and public liveness and readiness checks.
 
-  It was released as `v1.1.0`. The current version is the Git tag **`v1.1.1`** on the branch `main`, published as the image `ghcr.io/vitorhsbarros/matriz:1.1.1`: a patch that solves open points of `v1.1.0` ([release notes](docs/release-notes/v1.1.1.md)). The [release notes of `v1.1.0`](docs/release-notes/v1.1.0.md) and the [CHANGELOG](CHANGELOG.md) say what changed; what wasn't run and what is still open is listed in [docs/delivery-plan.md, "Delivery"](docs/delivery-plan.md#10-delivery).
-- **Not done yet:** the deployment. The platform is decided (PD13: Render, with its PostgreSQL; [docs/deployment-options.md](docs/deployment-options.md)).
+  It was released as `v1.1.0`, then `v1.1.1` solved its open points. The current version is the Git tag **`v1.2.0`** on the branch `main`, published as the image `ghcr.io/vitorhsbarros/matriz:1.2.0`: ready to deploy on Render ([release notes](docs/release-notes/v1.2.0.md)). The [release notes of `v1.1.0`](docs/release-notes/v1.1.0.md) and the [CHANGELOG](CHANGELOG.md) say what changed; what wasn't run and what is still open is listed in [docs/delivery-plan.md, "Delivery"](docs/delivery-plan.md#10-delivery).
+- **Deployment:** on Render, with its PostgreSQL (PD13, [docs/deployment-options.md](docs/deployment-options.md)), described in [render.yaml](render.yaml); see [Deploying to Render](#deploying-to-render).
 
 ## Running the application
 
@@ -146,7 +146,7 @@ Then replace the example values with your own. Every value in `.env.example` is 
 | Variable | What it sets |
 |---|---|
 | `MATRIZ_DB_NAME`, `MATRIZ_DB_USER`, `MATRIZ_DB_PASSWORD` | The database, user and password that `compose.yaml` creates, and that the application uses. |
-| `MATRIZ_DB_URL` | Where the application finds the database: `jdbc:postgresql://localhost:5432/matriz`. |
+| `MATRIZ_DB_URL` | Where the application finds the database: `jdbc:postgresql://localhost:5432/matriz`. A PostgreSQL connection string (`postgresql://user:password@host:port/database`) works too. |
 | `MATRIZ_DEMO_SEED` | `true` to create the demo accounts and projects at start-up (see below). |
 | `MATRIZ_DEMO_PASSWORD_ANA`, `…_RUI`, `…_SARA` | The demo accounts' passwords, 8 to 128 characters. They are stored only as BCrypt hashes. |
 | `MATRIZ_COOKIE_SECURE` | `false` only for `http://localhost`, so Safari keeps the session cookie; `true` (the default if unset) anywhere else, which must use HTTPS. |
@@ -256,13 +256,36 @@ scripts/image-smoke-test.sh
 
 **Stop.** `docker compose --profile app down` stops both containers and keeps the data; `-v` would delete it.
 
-**The published image.** Each release is published to the GitHub Container Registry by CI, as `ghcr.io/vitorhsbarros/matriz:<version>` (and `latest` for the newest final release). It is public and built for `linux/amd64`; on an arm64 machine Docker runs it under emulation, which is slower. Each image has a signed provenance attestation, which says which commit and workflow run built it: `gh attestation verify oci://ghcr.io/vitorhsbarros/matriz:1.1.1 -R vitorhsbarros/matriz` checks it. To run it instead of a local build:
+**The published image.** Each release is published to the GitHub Container Registry by CI, as `ghcr.io/vitorhsbarros/matriz:<version>` (and `latest` for the newest final release). It is public and built for `linux/amd64`; on an arm64 machine Docker runs it under emulation, which is slower. Each image has a signed provenance attestation, which says which commit and workflow run built it: `gh attestation verify oci://ghcr.io/vitorhsbarros/matriz:1.2.0 -R vitorhsbarros/matriz` checks it. To run it instead of a local build:
 
 ```bash
-docker pull ghcr.io/vitorhsbarros/matriz:1.1.1
-docker tag ghcr.io/vitorhsbarros/matriz:1.1.1 matriz:local
+docker pull ghcr.io/vitorhsbarros/matriz:1.2.0
+docker tag ghcr.io/vitorhsbarros/matriz:1.2.0 matriz:local
 docker compose --profile app up -d --wait --no-build
 ```
+
+### Deploying to Render
+
+[render.yaml](render.yaml) is a Render Blueprint: it describes the application, run from the published image `ghcr.io/vitorhsbarros/matriz:1.2.0`, and its PostgreSQL, both on Render's free plan, in Frankfurt (PD13). Render serves it over HTTPS on an `onrender.com` address. No secret is in the file: the database's credentials come from the database itself, and the demo passwords are asked for in Render's dashboard.
+
+1. Create an account on [render.com](https://render.com), and connect it to GitHub with access to this repository.
+2. In the dashboard: **New → Blueprint**, then choose the repository. Render reads `render.yaml` and lists the database `matriz-db` and the web service `matriz`.
+3. Enter `MATRIZ_DEMO_PASSWORD_ANA`, `MATRIZ_DEMO_PASSWORD_RUI` and `MATRIZ_DEMO_PASSWORD_SARA`: 8 to 128 characters each. Keep them: they are the demo accounts' passwords.
+4. **Apply.** Render creates the database, then pulls the image and starts the service. At start-up, Flyway creates the schema and the seed adds the demo accounts and projects.
+5. Wait until the service is **Live**: Render checks `/actuator/health/readiness`.
+6. Open the service's `https://….onrender.com` address and log in as `ana@example.com`.
+
+To check it from this machine, without writing the password on the command line:
+
+```bash
+read -rs MATRIZ_DEMO_PASSWORD_ANA && export MATRIZ_DEMO_PASSWORD_ANA
+BASE_URL=https://<service>.onrender.com scripts/image-smoke-test.sh
+```
+
+**The free plan's limits** ([Render's documentation](https://render.com/docs/free)):
+- **The service sleeps** after 15 minutes without traffic, and takes about a minute to wake up. Open it a few minutes before using it.
+- **The database expires** 30 days after it is created, and has 1 GB and no backups. If it expires, create a new one and point the service at it; the schema and the demo data come back on their own.
+- **New versions:** a service run from an image isn't redeployed by itself. To deploy another version, change the image's tag in `render.yaml` and sync the Blueprint, or use **Manual Deploy** in the dashboard.
 
 ### Working on the browser application
 

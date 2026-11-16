@@ -2,14 +2,20 @@
 
 Every release of Matriz, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Each version is a Git tag on `main`.
 
-## [Unreleased]
+## [1.2.0] - 2026-11-16
 
-Fixes from the final validation of the delivery ([docs/final-validation.md](docs/final-validation.md)).
+Ready to deploy on Render (PD13), plus the fixes from the final validation of the delivery ([docs/final-validation.md](docs/final-validation.md)). Release notes: [docs/release-notes/v1.2.0.md](docs/release-notes/v1.2.0.md).
+
+### Added
+
+- `MATRIZ_DB_URL` also accepts a PostgreSQL connection string (`postgresql://user:password@host:port/database`), the form hosting platforms give, besides a JDBC URL. It becomes a JDBC URL without its credentials; the user and password in it are used only when `MATRIZ_DB_USER` and `MATRIZ_DB_PASSWORD` aren't set. An invalid string stops the start-up without showing its value.
+- `render.yaml`, a Render Blueprint: the application from the published image and a free PostgreSQL, in Frankfurt, with the health check on readiness and no secret in the file.
+- `scripts/image-smoke-test.sh` can check a deployed application: with `BASE_URL`, it requires HTTPS and a `Secure`, `HttpOnly` session cookie, and skips the container checks.
 
 ### Changed
 
 - The image built from the `Dockerfile` carries Matriz's own labels (`title`, `description`, `source`, and a version that is `local` unless the build sets it), instead of the base image's.
-- The browser application's `package.json` has the release's version, `1.1.1`.
+- The browser application's `package.json` has the release's version.
 
 ### Fixed
 
@@ -95,6 +101,7 @@ The MVP (Lab 03): the 23 MVP user stories, usable through the browser applicatio
 - Projects, their members, teams, tasks on a board with filters, assignees and comments.
 - PostgreSQL with Flyway migrations, one folder per module, and module boundaries checked by `ModularityTest`.
 
+[1.2.0]: https://github.com/vitorhsbarros/matriz/releases/tag/v1.2.0
 [1.1.1]: https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.1
 [1.1.0]: https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.0
 [1.1.0-rc.1]: https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.0-rc.1
