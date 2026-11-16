@@ -8,7 +8,7 @@ The deployment platform is still a pending decision (PD13, [constraints.md](cons
 
 | Component | What it is | Evidence |
 |---|---|---|
-| Application | A Spring Boot 4.1.2 modular monolith, Java 21, built as one JAR (`matriz-0.1.0-SNAPSHOT.jar`) | `pom.xml` (parent, `java.version`, `version`) |
+| Application | A Spring Boot 4.1.2 modular monolith, Java 21, built as one JAR (`matriz-0.1.0-SNAPSHOT.jar` at the time of this analysis; `target/matriz.jar` since `1.1.1`) | `pom.xml` (parent, `java.version`, `version`) |
 | Modules | `web`, `accounts`, `projects`, `teams`, `tasks`, checked by `ModularityTest` | `src/main/java/matriz/` |
 | Browser application | React + TypeScript built with Vite into `target/classes/static`, so it is inside the JAR and served by Spring Boot | `frontend/vite.config.ts` (`outDir`) |
 | Database | PostgreSQL 17.10. Flyway creates the schema at start-up: six migrations, one folder per module | `compose.yaml`, `src/main/resources/db/migration/` |
@@ -22,7 +22,7 @@ The deployment platform is still a pending decision (PD13, [constraints.md](cons
 - **To run:** a Java 21 runtime and PostgreSQL 17.
 - **Commands today:**
   - `./mvnw verify`: the build and every test;
-  - `java -jar target/matriz-0.1.0-SNAPSHOT.jar`: start the application;
+  - `java -jar target/matriz-0.1.0-SNAPSHOT.jar`: start the application (`java -jar target/matriz.jar` since `1.1.1`);
   - `docker compose up -d --wait`: start the database only.
 
 ## 3. External services and environment variables

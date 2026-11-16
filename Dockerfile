@@ -31,6 +31,14 @@ RUN --mount=type=cache,target=/root/.m2 \
 # Final stage: only the Java runtime and the JAR.
 FROM eclipse-temurin:21.0.13_9-jre-noble@sha256:0d57a8e90c2bb844c5a8e1b2b71e11eff06dad7edcfd803cd21ed4ae203b2515
 
+# What the image is, for any build, local or in CI; otherwise the base image's own labels would show,
+# Ubuntu's version among them. A local build is "local"; CI sets the release's version and the commit.
+ARG MATRIZ_IMAGE_VERSION=local
+LABEL org.opencontainers.image.title="Matriz" \
+      org.opencontainers.image.description="Project and task management application for work teams" \
+      org.opencontainers.image.source="https://github.com/vitorhsbarros/matriz" \
+      org.opencontainers.image.version="${MATRIZ_IMAGE_VERSION}"
+
 # Ubuntu security updates published after the base image was built, so a known vulnerability that
 # already has a fix doesn't wait for a new base image (the image scan in CI fails on those).
 RUN apt-get update \

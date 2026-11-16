@@ -2,6 +2,19 @@
 
 Every release of Matriz, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Each version is a Git tag on `main`.
 
+## [Unreleased]
+
+Fixes from the final validation of the delivery ([docs/final-validation.md](docs/final-validation.md)).
+
+### Changed
+
+- The image built from the `Dockerfile` carries Matriz's own labels (`title`, `description`, `source`, and a version that is `local` unless the build sets it), instead of the base image's.
+- The browser application's `package.json` has the release's version, `1.1.1`.
+
+### Fixed
+
+- `docs/architecture.md` named JUnit 5, while the build uses JUnit 6. `docs/delivery-plan.md` now gives the current name of the JAR next to the old one.
+
 ## [1.1.1] - 2026-11-16
 
 Solves open points of 1.1.0. The application's features and its API are the same. Release notes: [docs/release-notes/v1.1.1.md](docs/release-notes/v1.1.1.md).
