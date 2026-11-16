@@ -10,10 +10,10 @@ spring:
     url: ${MATRIZ_DB_URL:}
     username: ${MATRIZ_DB_USER:}
     password: ${MATRIZ_DB_PASSWORD:}
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
+    hikari:
+      # How long a request waits for a database connection before it fails, in milliseconds (30 s by default).
+      # It also bounds how long /actuator/health/readiness takes to answer DOWN while the database can't be reached.
+      connection-timeout: 5000
   flyway:
     # One folder per module (ADR-0001), applied in version order: accounts, projects, teams, tasks.
     locations:

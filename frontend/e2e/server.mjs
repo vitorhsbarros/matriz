@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 
 const LABEL = "matriz-e2e";
-const jar = resolve(import.meta.dirname, "../../target/matriz-0.1.0-SNAPSHOT.jar");
+const jar = resolve(import.meta.dirname, "../../target/matriz.jar");
 const port = process.env.E2E_PORT ?? "8095";
 const dbPassword = randomUUID();
 let app;

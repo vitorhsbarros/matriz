@@ -26,7 +26,7 @@ COPY src/main src/main
 RUN --mount=type=cache,target=/root/.m2 \
     --mount=type=cache,target=/root/.npm \
     ./mvnw --batch-mode --no-transfer-progress package -DskipTests -Dmaven.test.skip=true \
-    && cp target/matriz-*.jar /workspace/matriz.jar
+    && cp target/matriz.jar /workspace/matriz.jar
 
 # Final stage: only the Java runtime and the JAR.
 FROM eclipse-temurin:21.0.13_9-jre-noble@sha256:0d57a8e90c2bb844c5a8e1b2b71e11eff06dad7edcfd803cd21ed4ae203b2515
