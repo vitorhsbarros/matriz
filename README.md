@@ -72,7 +72,7 @@ The versions are the ones the build uses, from `pom.xml` (and Spring Boot's mana
 | [docs/quality-security-review.md](docs/quality-security-review.md) | Code and security review: findings with their evidence, the decisions taken, the fixes and their regression tests, and what was left unverified. |
 | [CHANGELOG.md](CHANGELOG.md) | Every release, newest first, with what was added, changed and fixed. |
 | [docs/release-notes/](docs/release-notes/) | Release notes of each version since `v1.1.0`, with the version number reasoning and the known issues. |
-| [docs/deployment-options.md](docs/deployment-options.md) | The deployment platforms compared for the pending decision PD13. |
+| [docs/deployment-options.md](docs/deployment-options.md) | The deployment platforms compared for PD13, decided on 2026-11-16: Render. |
 | [docs/delivery-plan.md](docs/delivery-plan.md) | Delivery plan: the analysis behind the container image, Docker Compose and the CI workflow, the steps, and the "Delivery" section of the current version. |
 | [docs/final-validation.md](docs/final-validation.md) | Final validation of the delivery: the requirements met, the problems found and the limitations still open. |
 | [docs/verification.md](docs/verification.md) | Verification of the MVP: for each scenario, the expected result, the observed result and the evidence (tests, screenshots in [docs/verification/](docs/verification/), database checks), and how the data survives restarts. |
@@ -111,7 +111,7 @@ The versions are the ones the build uses, from `pom.xml` (and Spring Boot's mana
   - JSON logs in the container, and public liveness and readiness checks.
 
   It was released as `v1.1.0`. The current version is the Git tag **`v1.1.1`** on the branch `main`, published as the image `ghcr.io/vitorhsbarros/matriz:1.1.1`: a patch that solves open points of `v1.1.0` ([release notes](docs/release-notes/v1.1.1.md)). The [release notes of `v1.1.0`](docs/release-notes/v1.1.0.md) and the [CHANGELOG](CHANGELOG.md) say what changed; what wasn't run and what is still open is listed in [docs/delivery-plan.md, "Delivery"](docs/delivery-plan.md#10-delivery).
-- **Not done yet:** the deployment to a hosting platform (PD13, pending; the options are compared in [docs/deployment-options.md](docs/deployment-options.md)).
+- **Not done yet:** the deployment. The platform is decided (PD13: Render, with its PostgreSQL; [docs/deployment-options.md](docs/deployment-options.md)).
 
 ## Running the application
 

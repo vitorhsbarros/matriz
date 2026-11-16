@@ -96,7 +96,7 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
 - **Vue or Angular instead of React:** Vue is equally suitable and simpler to learn, with a smaller ecosystem; Angular is heavy for 23 stories and one developer.
 - **Server-rendered pages (e.g. Thymeleaf with htmx):** no second toolchain, but the client would no longer use the JSON API in `openapi.yaml` (AS01), so the contract would have to be revised.
 
-**Deployment.** The user confirmed that the application will be deployed. Where it is deployed, and the deployment plan, are left for later (PD13). Whatever the platform, the deployment must:
+**Deployment.** The user confirmed that the application will be deployed. It is deployed on **Render** with Render's PostgreSQL (PD13, decided 2026-11-16, [constraints.md](constraints.md#4-pending-decisions)); the deployment plan is its own task. The deployment must:
 - serve the application over HTTPS, because the session cookie is `Secure` (SEC08, ADR-0002);
 - serve the browser application and the API from the same site (ADR-0002);
 - give the database connection details and the demo account passwords through environment variables or the platform's secret store, never in the repository (SEC10, AGENTS.md §7).
@@ -128,7 +128,7 @@ flowchart LR
 - the concurrency rule (PD05, decided 2026-11-11 with I4);
 - the password hashing method (PD06);
 - the demo account seed (PD12);
-- the deployment platform (PD13).
+- the deployment platform (PD13, decided 2026-11-16: Render).
 
 **Spring Boot 4 instead of 3.** The stack was confirmed with Spring Boot 3, but the 3.5 line, the last one, no longer gets free security fixes. At the start of I0 the user chose to move to Spring Boot 4 (2026-11-11).
 

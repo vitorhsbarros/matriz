@@ -1,6 +1,6 @@
 # Matriz — Deployment options (PD13)
 
-**Status: pending.** This compares the options for the pending decision PD13, the deployment platform, so the developer can choose. Nothing here is decided. The options come from [implementation-plan.md, section 1.3](implementation-plan.md#13-pending-technical-decisions), here worked out against what Matriz now has (release `v1.1.1`).
+**Status: decided on 2026-11-16: Render, with Render's PostgreSQL** (option (a)), recorded as PD13 in [constraints.md](constraints.md#4-pending-decisions). This page compared the options so the developer could choose; the decision is at the end. The options come from [implementation-plan.md, section 1.3](implementation-plan.md#13-pending-technical-decisions), here worked out against what Matriz now has (release `v1.1.1`).
 
 ## What any platform must provide
 
@@ -39,6 +39,20 @@ Kubernetes or a managed container service of a large cloud provider is left out:
 **(a)**, if the developer accepts the provider's terms. The image, the configuration by environment variables, the health checks and the JSON logs already fit how such platforms work, so the deployment could be done without changing the application. The points to check on the platform chosen are the cost and limits of the free or paid tier, the backups of its PostgreSQL, and whether its proxy needs `server.forward-headers-strategy`.
 
 **(b)** is the fallback if no platform's terms suit, or if full control matters more than effort.
+
+## Decision
+
+On 2026-11-16 the course recommended two free options for the final presentation: **Render** alone, or **Render with a Neon PostgreSQL** for a database that must persist. The developer chose **Render alone, for simplicity**: one platform and one dashboard, with the application and its database.
+
+Render's free plan, checked in [its documentation](https://render.com/docs/free) on 2026-11-16:
+- the web service sleeps after 15 minutes without traffic, and takes about a minute to wake up; 750 free hours a month;
+- the free PostgreSQL expires 30 days after it is created (then 14 days of grace before deletion), has 1 GB and no backups.
+
+**Accepted consequences:**
+- The database is created close to the final presentation, two days away, well inside the 30 days.
+- If it expires, a new one is created and the three `MATRIZ_DB_*` variables changed. Flyway recreates the schema and the demo seed the demo accounts and projects; data entered by hand is lost.
+- Moving to Neon later changes the same three variables only.
+- The first visit after 15 minutes without traffic waits about a minute: open the application shortly before presenting.
 
 ## Once chosen
 
