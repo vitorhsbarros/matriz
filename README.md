@@ -28,6 +28,22 @@ Public registration and password recovery are optional extensions, outside the M
 
 The full MVP scope, and what is left for later, is in [docs/requirements.md](docs/requirements.md).
 
+## Technologies
+
+The versions are the ones the build uses, from `pom.xml` (and Spring Boot's managed versions), `frontend/package.json`, `compose.yaml` and the `Dockerfile`. Why each part was chosen is in [docs/architecture.md, section 5](docs/architecture.md#5-technology-stack).
+
+| Part | Technology |
+|---|---|
+| Language and runtime | Java 21 (Eclipse Temurin 21.0.13 in the image) |
+| Application | Spring Boot 4.1.2: Spring Web MVC for the JSON API, Spring Security 7.1 (session cookie and CSRF), Spring Session JDBC, Spring Boot Actuator (health checks), Bean Validation |
+| Module boundaries | Spring Modulith 2.1.2, checked by `ModularityTest` |
+| Database | PostgreSQL 17.10, driver 42.7.14, schema by Flyway 12.4.0 migrations (one folder per module), data access with Spring's `JdbcClient` |
+| Browser application | React 19.3.1 and TypeScript 5.9.3, built with Vite 8.3.5 into the JAR |
+| Build | Maven 3.9.11 (wrapper), `frontend-maven-plugin` 2.0.2 with Node v24.22.3 |
+| Tests | JUnit 6.0.3, Spring Boot Test and Testcontainers 2.0.5 (back end), Vitest 4.1.12 and Testing Library 16.3.3 (browser application), Playwright 1.64.1 with Chromium (end to end) |
+| Containers | Docker with a multi-stage `Dockerfile`, Docker Compose |
+| CI and delivery | GitHub Actions: Semgrep, CodeQL, OSV-Scanner (with a CycloneDX SBOM), Docker Buildx, and the GitHub Container Registry |
+
 ## Documentation
 
 ### Specification Pack
@@ -54,6 +70,9 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
 |---|---|
 | [docs/test-plan.md](docs/test-plan.md) | Test plan for tasks and their permissions, derived from the requirements: scenarios, expected results and the tests that check each one. |
 | [docs/quality-security-review.md](docs/quality-security-review.md) | Code and security review: findings with their evidence, the decisions taken, the fixes and their regression tests, and what was left unverified. |
+| [CHANGELOG.md](CHANGELOG.md) | Every release, newest first, with what was added, changed and fixed. |
+| [docs/release-notes/](docs/release-notes/v1.1.0.md) | Release notes of the current version, with its version number reasoning and known issues. |
+| [docs/delivery-plan.md](docs/delivery-plan.md) | Delivery plan: the analysis behind the container image, Docker Compose and the CI workflow, the steps, and the "Delivery" section of the current version. |
 | [docs/verification.md](docs/verification.md) | Verification of the MVP: for each scenario, the expected result, the observed result and the evidence (tests, screenshots in [docs/verification/](docs/verification/), database checks), and how the data survives restarts. |
 | [docs/reviews/](docs/reviews/) | Critical reviews of the documentation, with the decisions taken on each finding. |
 | [docs/prompts/](docs/prompts/) | The prompts used to produce the documentation with AI assistance. |
@@ -81,7 +100,15 @@ The full MVP scope, and what is left for later, is in [docs/requirements.md](doc
   - tests derived from the requirements ([docs/test-plan.md](docs/test-plan.md)): unit, integration and end-to-end, all run by `./mvnw verify`;
   - a code and security review ([docs/quality-security-review.md](docs/quality-security-review.md)), whose six findings were fixed.
 
-  The current version is the Git tag **`v1.0.1`** on the branch `main`: a patch with fixes and tests, and no new features. What wasn't run and what is still pending is listed in [docs/quality-security-review.md, "Delivery"](docs/quality-security-review.md#delivery).
+  That work was released as the Git tag `v1.0.1`: a patch with fixes and tests, and no new features ([docs/quality-security-review.md, "Delivery"](docs/quality-security-review.md#delivery)).
+- **Delivery (Lab 05):** planned in [docs/delivery-plan.md](docs/delivery-plan.md):
+  - a container image, run as a non-root user;
+  - Docker Compose for the application and PostgreSQL together;
+  - a CI job that builds, scans and tests the image once every check has passed;
+  - publication of that image to `ghcr.io` on each release;
+  - JSON logs in the container, and public liveness and readiness checks.
+
+  The current version is the Git tag **`v1.1.0`** on the branch `main`, published as the image `ghcr.io/vitorhsbarros/matriz:1.1.0`. Its [release notes](docs/release-notes/v1.1.0.md) and the [CHANGELOG](CHANGELOG.md) say what changed; what wasn't run and what is still open is listed in [docs/delivery-plan.md, "Delivery"](docs/delivery-plan.md#10-delivery).
 - **Not done yet:** the deployment to a hosting platform (PD13, pending).
 
 ## Running the application
@@ -145,6 +172,11 @@ This builds the back end and the browser application into one JAR (`target/matri
 
 The first run downloads the dependencies, and Chromium for the end-to-end test (about 100 MB), and takes a few minutes. Later runs take about two and a half. To run one back-end test class only: `./mvnw test -Dtest=TasksApiTest -Dskip.npm -Dskip.installnodenpm`. To skip only the end-to-end test: `./mvnw verify -Dskip.e2e`.
 
+On GitHub, the CI workflow ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every push and pull request to `main`:
+1. **Checks:** the same `./mvnw verify`, the static analysis of the code (Semgrep, CodeQL), and the dependency scan (OSV-Scanner).
+2. **Image:** once all of those pass, it builds the container image, scans it for known vulnerabilities and tests it with Docker Compose (see [Running with Docker](#running-with-docker)).
+3. **Publication:** when a release is published, it also pushes that tested image to `ghcr.io`.
+
 ### 5. Start the application
 
 ```bash
@@ -175,6 +207,60 @@ Log in as different people to see the access rules: Sara gets "Project not found
 ### Stop
 
 `Ctrl+C` stops the application. `docker compose down` stops PostgreSQL and keeps its data; `docker compose down -v` deletes it.
+
+### Running with Docker
+
+The application can also run in a container, next to PostgreSQL, so only Docker is needed. It reads the same `.env` (step 2), with one difference: the container reaches the database through Compose, so it ignores `MATRIZ_DB_URL`.
+
+**Build the image** (`matriz:local`) from the `Dockerfile`. Maven builds the JAR inside the build, without running the tests, so run `./mvnw verify` for those. The first build takes a few minutes.
+
+```bash
+docker compose --profile app build
+```
+
+**Start PostgreSQL and the application.** The command returns once both are healthy: the application is healthy when it is ready to serve requests, which needs the database. Without `--profile app`, only PostgreSQL starts, as in step 3.
+
+```bash
+docker compose --profile app up -d --wait
+```
+
+The application is then on `http://localhost:8080/`, and PostgreSQL on port 5432, both reachable from this machine only (`127.0.0.1`). To use another port for the application, set `MATRIZ_APP_PORT`, in `.env` or on the command line: `MATRIZ_APP_PORT=8082 docker compose --profile app up -d --wait`.
+
+**Health checks.** All three can be read without logging in. They show only a status, and `/actuator/health` also the names of the two others:
+
+| URL | Answers `UP` when | When the database can't be reached |
+|---|---|---|
+| `/actuator/health` | everything is up | `DOWN` (503) |
+| `/actuator/health/liveness` | the application is running | still `UP`, so a platform doesn't restart it for that |
+| `/actuator/health/readiness` | it can serve requests | `DOWN` (503) |
+
+**Logs.** In the container, each line is a JSON object in the Elastic Common Schema (ECS), for a log collector. Outside the container the logs stay plain text.
+
+```bash
+docker compose logs app                                    # the JSON lines
+docker compose logs --no-log-prefix app | jq -r .message   # only the messages
+```
+
+**Check it.** `scripts/image-smoke-test.sh` checks the running containers, the same way CI does:
+- **the image:** a non-root user, no `.env` or sources, a read-only file system, ports on `127.0.0.1`;
+- **the application:** the health checks, the JSON logs, log-in, CSRF, and creating and reading a task;
+- **persistence:** the task is still there after the containers are recreated.
+
+It needs `curl`, `jq` and `MATRIZ_DEMO_SEED=true`, and uses `MATRIZ_APP_PORT` if it is set. It deletes the task it creates.
+
+```bash
+scripts/image-smoke-test.sh
+```
+
+**Stop.** `docker compose --profile app down` stops both containers and keeps the data; `-v` would delete it.
+
+**The published image.** Each release is published to the GitHub Container Registry by CI, as `ghcr.io/vitorhsbarros/matriz:<version>` (and `latest` for the newest final release). It is public and built for `linux/amd64`; on an arm64 machine Docker runs it under emulation, which is slower. To run it instead of a local build:
+
+```bash
+docker pull ghcr.io/vitorhsbarros/matriz:1.1.0
+docker tag ghcr.io/vitorhsbarros/matriz:1.1.0 matriz:local
+docker compose --profile app up -d --wait --no-build
+```
 
 ### Working on the browser application
 

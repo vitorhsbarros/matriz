@@ -99,7 +99,19 @@ End every task with a short report:
   - **Build and test everything:** `./mvnw verify`: the back-end tests (Testcontainers, so Docker must be running), the browser application tests, `ModularityTest`, the JAR with the browser application inside, and then the end-to-end test (Playwright, Chromium) against that JAR and a throw-away PostgreSQL, on port 8095. `-Dskip.e2e` skips only the end-to-end test.
   - **One test class, back end only:** `./mvnw test -Dtest=TasksApiTest -Dskip.npm -Dskip.installnodenpm`.
   - **Run the application:** `java -jar target/matriz-0.1.0-SNAPSHOT.jar`, or `./mvnw spring-boot:run`. Another port: `SERVER_PORT=8081 java -jar …`. Flyway creates or updates the schema at start-up, and `MATRIZ_DEMO_SEED=true` adds the demo accounts and projects that are missing.
-  - **Check it runs:** `curl http://localhost:8080/actuator/health` answers `{"status":"UP"…}`.
+  - **Check it runs:** `curl http://localhost:8080/actuator/health` answers `{"status":"UP"…}`. `/actuator/health/liveness` (the application is running) and `/actuator/health/readiness` (it can serve requests, which needs the database) are public too, and show only their status.
+  - **In containers** (details in [README.md](README.md#running-with-docker)):
+    - `docker compose --profile app build` builds the image `matriz:local` from the `Dockerfile`, without running the tests;
+    - `docker compose --profile app up -d --wait` starts PostgreSQL and the application, on `127.0.0.1:8080` (or `MATRIZ_APP_PORT`), and returns once both are healthy;
+    - `docker compose --profile app down` stops both and keeps the data. Without `--profile app`, Compose handles only PostgreSQL;
+    - `scripts/image-smoke-test.sh` checks the running containers: the image, the health checks, the JSON logs, log-in, a task, and persistence. It recreates the containers, and deletes the task it creates;
+    - in the container the logs are ECS JSON (`docker compose logs app`). Outside it they are plain text.
+  - **CI** (`.github/workflows/ci.yml`, on every push and pull request to `main`):
+    - `build`, `sast-semgrep`, `sast-codeql` and `sca` run first;
+    - `image` builds, scans and smoke-tests the image after all four pass;
+    - `publish` pushes that image to `ghcr.io/vitorhsbarros/matriz` only when a GitHub release is published.
+
+    Releases (tags and GitHub releases) are published only with the user's approval (section 6).
   - **Browser application only:** in `frontend/`, `npm ci` once, then `npm run dev` (Vite on port 5173, forwarding `/api` to port 8080 or to `MATRIZ_API_PORT`), `npm test`, `npm run build`, `npm run e2e` (needs the JAR built first).
   - **Module boundaries:** checked by `ModularityTest` (Spring Modulith) in every build.
   - **Verification record:** [docs/verification.md](docs/verification.md) lists each scenario's expected and observed results and their evidence. Update it when a check is run again.

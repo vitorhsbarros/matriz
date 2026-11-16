@@ -86,8 +86,8 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
 | **Application framework** | Spring Boot 4 (4.1.2), one application (ADR-0001): Spring Web for the JSON API in `openapi.yaml`, Spring Security for the session cookie and the CSRF header (ADR-0002), Spring Session JDBC to keep sessions in the shared database (ADR-0002), Spring Data JPA for data access. | Covers ADR-0001 and ADR-0002 with standard, well-known parts; the developer already knows them (ASM07). |
 | **Database** | PostgreSQL, one database for the whole application (ADR-0001), the same product in development, tests and deployment. Schema managed with Flyway migrations, one folder per module. Locally it runs in a container (Docker Compose); the tests use Testcontainers. | The application will be deployed, so the database must be a server database that keeps its data between restarts and runs the same way everywhere. PostgreSQL is free, widely hosted and well supported by Spring Boot and Flyway. |
 | **Browser application** | A single-page application in React with TypeScript, built with Vite. The build output is copied into the Spring Boot JAR (e.g. with the `frontend-maven-plugin`) and served by the same application. In development, the Vite server forwards `/api` to Spring Boot. | It is the client the API was designed for (AS01 in api-contract.md). Served from the same site as the API, which `SameSite=Lax` needs (ADR-0002, ASM11), and still one deployable (ADR-0001). React has ready-made parts for the board's drag and drop (US07) and for forms; TypeScript keeps the client's types in line with `openapi.yaml`. |
-| **Build and tests** | Maven (with the wrapper) builds the whole application, including the browser application. JUnit 5 and Spring Boot Test for the API, sending real HTTP requests to the application on a random port, with the session cookie and the CSRF header as the browser sends them, one test per acceptance criterion where possible, against PostgreSQL in Testcontainers. Vitest and Testing Library for the browser application's components. Playwright (Chromium) for the end-to-end test, run by `./mvnw verify` against the built JAR and a throw-away PostgreSQL (added in Lab 04 with the user's approval, 2026-11-14). Continuous integration on GitHub Actions (`.github/workflows/ci.yml`): `./mvnw verify`, SAST with Semgrep and CodeQL, and SCA with OSV-Scanner, over a CycloneDX SBOM of the Maven dependencies and the npm lockfile, on every push and pull request to `main` (added with the user's approval, 2026-11-14). | Standard for each part; tests map to the acceptance criteria (C08), on the same database as the deployment. |
-| **Packaging** | One executable JAR, in one container image, so the same artefact runs locally and in the deployment (ADR-0001: one deployable). | Simple to deploy on most hosting platforms. |
+| **Build and tests** | Maven (with the wrapper) builds the whole application, including the browser application. JUnit 5 and Spring Boot Test for the API, sending real HTTP requests to the application on a random port, with the session cookie and the CSRF header as the browser sends them, one test per acceptance criterion where possible, against PostgreSQL in Testcontainers. Vitest and Testing Library for the browser application's components. Playwright (Chromium) for the end-to-end test, run by `./mvnw verify` against the built JAR and a throw-away PostgreSQL (added in Lab 04 with the user's approval, 2026-11-14). Continuous integration on GitHub Actions (`.github/workflows/ci.yml`): `./mvnw verify`, SAST with Semgrep and CodeQL, and SCA with OSV-Scanner, over a CycloneDX SBOM of the Maven dependencies and the npm lockfile, on every push and pull request to `main` (added with the user's approval, 2026-11-14). Once those pass, the `image` job builds the container image, scans it with OSV-Scanner and tests it with Docker Compose. When a release is published, the `publish` job pushes that same image to `ghcr.io` (Lab 05, 2026-11-15). | Standard for each part; tests map to the acceptance criteria (C08), on the same database as the deployment. |
+| **Packaging** | One executable JAR, in one container image, so the same artefact runs locally and in the deployment (ADR-0001: one deployable). The image is built by the multi-stage `Dockerfile`: a Java 21 runtime and the JAR, run as a non-root user, with its health check on readiness and its logs as ECS JSON. `compose.yaml` runs it with PostgreSQL (profile `app`). Each GitHub release publishes the tested image to `ghcr.io/vitorhsbarros/matriz` (added in Lab 05 with the user's approval, 2026-11-15; [delivery-plan.md](delivery-plan.md)). | Simple to deploy on most hosting platforms. |
 
 **Alternatives considered:**
 - **H2 (embedded, file mode) instead of PostgreSQL:** nothing to install, but it isn't meant for a deployed application: data lives in a file on the application's machine, which many hosting platforms erase on restart, and its SQL differs from a server database. Rejected once a deployment was confirmed.
@@ -100,6 +100,27 @@ The full comparison is in [03-alternatives.md](architecture/03-alternatives.md).
 - serve the application over HTTPS, because the session cookie is `Secure` (SEC08, ADR-0002);
 - serve the browser application and the API from the same site (ADR-0002);
 - give the database connection details and the demo account passwords through environment variables or the platform's secret store, never in the repository (SEC10, AGENTS.md §7).
+
+**Build, run and delivery** (Lab 05, [delivery-plan.md](delivery-plan.md)). Two containers run Matriz: the application, with the browser application inside its JAR, and PostgreSQL. CI publishes only an image that passed every check. Where it is deployed is still open (PD13).
+
+```mermaid
+flowchart LR
+    dev([Developer]) -- "push, pull request, release" --> gh
+    subgraph gh["GitHub Actions (ci.yml)"]
+        checks["build: ./mvnw verify<br/>sast-semgrep, sast-codeql<br/>sca: OSV-Scanner"]
+        image["image: build, scan,<br/>Compose smoke test"]
+        publish["publish:<br/>releases only"]
+        checks --> image --> publish
+    end
+    publish -- "1.1.0, sha-…, latest" --> ghcr[("ghcr.io/<br/>vitorhsbarros/matriz")]
+    subgraph host["A machine with Docker (compose.yaml, profile app)"]
+        app["app container<br/>Spring Boot JAR + browser application<br/>user 10001, read-only, port 8080"]
+        pg[("postgres container<br/>PostgreSQL 17.10<br/>volume matriz-postgres")]
+        app -- "JDBC, network matriz" --> pg
+    end
+    ghcr -. "docker pull" .-> app
+    user([User - browser]) -- "HTTP, 127.0.0.1:8080" --> app
+```
 
 **Not decided here:** these stay pending, with options in [implementation-plan.md, section 1.3](implementation-plan.md#13-pending-technical-decisions):
 - the module-boundary check (PD03);
