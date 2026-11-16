@@ -254,8 +254,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Publishes the tested image to the GitHub Container Registry, on releases only. This is the only job
-  # that can write packages, and it logs in with the workflow's own token: no stored secret.
+  # Publishes the tested image to the GitHub Container Registry, on releases only, with a signed
+  # provenance attestation. This is the only job that can write packages or attestations, and it uses
+  # the workflow's own token and OIDC identity: no stored secret or signing key.
   publish:
     name: Publish the image (releases only)
     needs: image
@@ -265,6 +266,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # Signing the attestation with the workflow's OIDC identity (Sigstore), and storing it on GitHub.
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -274,6 +278,7 @@ jobs:
       # Tags: the version (the release tag without "v") and the commit; "latest" only for a final
       # release, never for a pre-release.
       - name: Push the image to ghcr.io
+        id: push
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           PRERELEASE: ${{ github.event.release.prerelease }}
@@ -293,7 +298,8 @@ jobs:
             docker push --quiet "$tag"
           done
           digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "${tags[0]}")
-          docker logout ghcr.io
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest#*@}" >> "$GITHUB_OUTPUT"
 
           {
             echo "### Published image"
@@ -303,3 +309,17 @@ jobs:
             for tag in "${tags[@]}"; do echo "- \`$tag\`"; done
           } >> "$GITHUB_STEP_SUMMARY"
           echo "Published $digest as: ${tags[*]}"
+
+      # Who built the image, from which commit and workflow run, signed and stored on GitHub and next to
+      # the image in the registry. Anyone can check it:
+      #   gh attestation verify oci://ghcr.io/vitorhsbarros/matriz:<version> -R vitorhsbarros/matriz
+      - name: Attest the image's provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.push.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Log out of ghcr.io
+        if: always()
+        run: docker logout ghcr.io || true
