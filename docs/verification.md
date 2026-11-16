@@ -674,3 +674,32 @@ Afterwards the `app` service and the pulled images were removed, the local arm64
 | `409` | All 4 operations, with the messages of the user stories. Each is also covered by a test: `MembersApiTest.someoneWhoIsAlreadyAMemberIsRefused`, `TeamsApiTest.aNameAlreadyInUseIsRefusedIgnoringCaseAndSpaces`, `TeamsApiTest.renameErrors` and `TeamsApiTest.memberErrors` |
 
 112 requests, no difference from `openapi.yaml`. The tasks, comment and teams created for the check were deleted.
+
+## 20. Release v1.1.1: the open points of v1.1.0
+
+On 2026-11-16, at the developer's request, the open points of `v1.1.0` ([delivery-plan.md, section 10](delivery-plan.md#10-delivery)) were solved, except PD13, which is the developer's decision. Released as the patch `v1.1.1`.
+
+**What changed:**
+- **`pom.xml`:**
+  - `spring-boot-starter-data-jpa` replaced by `spring-boot-starter-jdbc`. The code had no `@Entity`, repository or `EntityManager`, so JPA validated nothing;
+  - version `1.1.1` (was `0.1.0-SNAPSHOT`);
+  - `<finalName>matriz</finalName>`, so the JAR is `target/matriz.jar`.
+- **`application.yaml`:** the `spring.jpa` block removed. `spring.datasource.hikari.connection-timeout: 5000` (milliseconds; 30 000 by default).
+- **`Dockerfile`, `frontend/e2e/server.mjs`, README, AGENTS.md:** the new JAR name.
+- **`ci.yml`, `publish` job:**
+  - a provenance attestation of the pushed image (`actions/attest-build-provenance` v4.2.2, pinned by commit), also pushed to the registry;
+  - new permissions, in this job only: `id-token: write` and `attestations: write`;
+  - the log-out moved to a final step that always runs.
+- **Documents:** architecture.md §5 (JDBC, the attestation), `docs/deployment-options.md` (PD13 compared, not decided), CHANGELOG, release notes.
+
+**Local checks:**
+
+| Check | Result |
+|---|---|
+| `./mvnw clean verify` | **BUILD SUCCESS** in 2 min 21 s: 221 back-end tests, 46 browser application tests, `ModularityTest`, and the end-to-end test against `target/matriz.jar`. No line of the build mentions Hibernate or JPA. The first run failed at start-up because the time-out was written `5s`, which Hikari doesn't read (it takes milliseconds); corrected to `5000` |
+| JAR | `target/matriz.jar`, 31.8 MB (60.6 MB before) |
+| Image (`docker compose --profile app build`) | 139 MB compressed (165 MB before) |
+| `docker compose --profile app up -d --wait` (port 8082) | `Healthy`. "Starting MatrizApplication v1.1.1", `service.version` `1.1.1`, "Started MatrizApplication in 2.188 seconds" |
+| `scripts/image-smoke-test.sh` | All 12 checks passed |
+| `docker compose stop postgres` | Readiness `DOWN` 503 in 0.02 s (the pool's connections failed at once), then in **5.03 s**; liveness `UP` 200; the container turned `unhealthy`. After `docker compose start postgres`: readiness `UP`, `healthy` |
+| `actionlint` | No findings. Write permissions: `security-events` in `sast-codeql`; `packages`, `id-token` and `attestations` in `publish` only |

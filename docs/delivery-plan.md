@@ -131,7 +131,7 @@ Each step is checked before the next one starts.
 ## 9. Differences between the documents and the code
 
 Found during the analysis and reported to the user:
-- [architecture.md §5](architecture.md#5-technology-stack) says "Spring Data JPA for data access", but there are no `@Entity` classes, and data access uses `JdbcClient`. JPA only validates the schema (`ddl-auto: validate`). Not corrected.
+- [architecture.md §5](architecture.md#5-technology-stack) said "Spring Data JPA for data access", but there were no `@Entity` classes, and data access uses `JdbcClient`. With no entities, `ddl-auto: validate` checked nothing. Resolved in `v1.1.1` (2026-11-16): JPA was removed and the document corrected.
 - The same section said "Spring Boot Test with MockMvc", but the API tests send real HTTP requests and don't use MockMvc. Corrected in the document at the user's request (2026-11-15). The tests didn't change.
 - "Packaging" mentioned one container image, which didn't exist yet. Resolved by step 1, and the line now describes the image (2026-11-16).
 
@@ -165,3 +165,17 @@ Found during the analysis and reported to the user:
 - **Supply chain:** the image has no signature or provenance attestation, and the scan doesn't see the Java runtime (verification.md §16, §17).
 - **Version numbers:** `pom.xml` still says `0.1.0-SNAPSHOT`, which the JAR's name and the logs' `service.version` show, while the release is `v1.1.0`. It was the same for `v1.0.1`. Not changed.
 - **Documents and code:** architecture.md §5 says "Spring Data JPA for data access", while the code uses `JdbcClient` (section 9). Not changed.
+
+### Follow-up: v1.1.1
+
+On 2026-11-16 the developer asked to solve the open points above. Released as `v1.1.1`, a patch ([release-notes/v1.1.1.md](release-notes/v1.1.1.md), evidence in [verification.md §20](verification.md#20-release-v111-the-open-points-of-v110)):
+
+| Open point | Outcome |
+|---|---|
+| Readiness while the database is down | **Solved:** the connection time-out is 5 s, so readiness answers `DOWN` in about 5 s instead of 30 s |
+| Supply chain: no signature | **Solved for provenance:** each published image has a signed provenance attestation (GitHub artifact attestations, Sigstore), checked with `gh attestation verify`. The scan still doesn't see the Java runtime |
+| Version numbers | **Solved:** `pom.xml` follows the releases (`1.1.1`), and the JAR is `target/matriz.jar` whatever the version |
+| "Spring Data JPA" in architecture.md | **Solved:** JPA removed (it was never used), data access through Spring JDBC, document corrected |
+| PD13 | **Still pending,** the developer's decision. The options are compared in [deployment-options.md](deployment-options.md) |
+| amd64 only | Unchanged: multi-platform images are out of scope |
+

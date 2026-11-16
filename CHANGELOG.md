@@ -2,6 +2,24 @@
 
 Every release of Matriz, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Each version is a Git tag on `main`.
 
+## [1.1.1] - 2026-11-16
+
+Solves open points of 1.1.0. The application's features and its API are the same. Release notes: [docs/release-notes/v1.1.1.md](docs/release-notes/v1.1.1.md).
+
+### Added
+
+- A signed provenance attestation for each published image (GitHub artifact attestations), checked with `gh attestation verify oci://ghcr.io/vitorhsbarros/matriz:<version> -R vitorhsbarros/matriz`.
+- `docs/deployment-options.md`, the deployment platforms compared for the pending decision PD13.
+
+### Changed
+
+- The version in `pom.xml` follows the releases (`1.1.1`, was `0.1.0-SNAPSHOT`), so the logs' `service.version` shows it. The JAR is `target/matriz.jar` whatever the version.
+- Data access uses Spring JDBC only: Spring Data JPA and Hibernate, which were never used, were removed. The JAR is about half the size (31.8 MB instead of 60.6 MB) and starts faster.
+
+### Fixed
+
+- While the database can't be reached, `/actuator/health/readiness` answered `DOWN` only after 30 s. It now answers in about 5 s, the new time-out for getting a database connection.
+
 ## [1.1.0] - 2026-11-16
 
 Container delivery (Lab 05). The application's features are the same as in 1.0.1. Release notes: [docs/release-notes/v1.1.0.md](docs/release-notes/v1.1.0.md).
@@ -64,6 +82,7 @@ The MVP (Lab 03): the 23 MVP user stories, usable through the browser applicatio
 - Projects, their members, teams, tasks on a board with filters, assignees and comments.
 - PostgreSQL with Flyway migrations, one folder per module, and module boundaries checked by `ModularityTest`.
 
+[1.1.1]: https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.1
 [1.1.0]: https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.0
 [1.1.0-rc.1]: https://github.com/vitorhsbarros/matriz/releases/tag/v1.1.0-rc.1
 [1.0.1]: https://github.com/vitorhsbarros/matriz/releases/tag/v1.0.1

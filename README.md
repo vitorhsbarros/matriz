@@ -71,7 +71,8 @@ The versions are the ones the build uses, from `pom.xml` (and Spring Boot's mana
 | [docs/test-plan.md](docs/test-plan.md) | Test plan for tasks and their permissions, derived from the requirements: scenarios, expected results and the tests that check each one. |
 | [docs/quality-security-review.md](docs/quality-security-review.md) | Code and security review: findings with their evidence, the decisions taken, the fixes and their regression tests, and what was left unverified. |
 | [CHANGELOG.md](CHANGELOG.md) | Every release, newest first, with what was added, changed and fixed. |
-| [docs/release-notes/](docs/release-notes/v1.1.0.md) | Release notes of the current version, with its version number reasoning and known issues. |
+| [docs/release-notes/](docs/release-notes/) | Release notes of each version since `v1.1.0`, with the version number reasoning and the known issues. |
+| [docs/deployment-options.md](docs/deployment-options.md) | The deployment platforms compared for the pending decision PD13. |
 | [docs/delivery-plan.md](docs/delivery-plan.md) | Delivery plan: the analysis behind the container image, Docker Compose and the CI workflow, the steps, and the "Delivery" section of the current version. |
 | [docs/verification.md](docs/verification.md) | Verification of the MVP: for each scenario, the expected result, the observed result and the evidence (tests, screenshots in [docs/verification/](docs/verification/), database checks), and how the data survives restarts. |
 | [docs/reviews/](docs/reviews/) | Critical reviews of the documentation, with the decisions taken on each finding. |
@@ -108,8 +109,8 @@ The versions are the ones the build uses, from `pom.xml` (and Spring Boot's mana
   - publication of that image to `ghcr.io` on each release;
   - JSON logs in the container, and public liveness and readiness checks.
 
-  The current version is the Git tag **`v1.1.0`** on the branch `main`, published as the image `ghcr.io/vitorhsbarros/matriz:1.1.0`. Its [release notes](docs/release-notes/v1.1.0.md) and the [CHANGELOG](CHANGELOG.md) say what changed; what wasn't run and what is still open is listed in [docs/delivery-plan.md, "Delivery"](docs/delivery-plan.md#10-delivery).
-- **Not done yet:** the deployment to a hosting platform (PD13, pending).
+  It was released as `v1.1.0`. The current version is the Git tag **`v1.1.1`** on the branch `main`, published as the image `ghcr.io/vitorhsbarros/matriz:1.1.1`: a patch that solves open points of `v1.1.0` ([release notes](docs/release-notes/v1.1.1.md)). The [release notes of `v1.1.0`](docs/release-notes/v1.1.0.md) and the [CHANGELOG](CHANGELOG.md) say what changed; what wasn't run and what is still open is listed in [docs/delivery-plan.md, "Delivery"](docs/delivery-plan.md#10-delivery).
+- **Not done yet:** the deployment to a hosting platform (PD13, pending; the options are compared in [docs/deployment-options.md](docs/deployment-options.md)).
 
 ## Running the application
 
@@ -164,7 +165,7 @@ This starts PostgreSQL 17.10 in a container, with the database, user and passwor
 ./mvnw verify
 ```
 
-This builds the back end and the browser application into one JAR (`target/matriz-0.1.0-SNAPSHOT.jar`) and runs every test:
+This builds the back end and the browser application into one JAR (`target/matriz.jar`) and runs every test:
 - the back-end tests, which start their own throw-away PostgreSQL with Testcontainers;
 - the browser application tests (Vitest);
 - `ModularityTest`, which checks the module boundaries;
@@ -180,10 +181,10 @@ On GitHub, the CI workflow ([.github/workflows/ci.yml](.github/workflows/ci.yml)
 ### 5. Start the application
 
 ```bash
-java -jar target/matriz-0.1.0-SNAPSHOT.jar
+java -jar target/matriz.jar
 ```
 
-Or, without building the JAR first: `./mvnw spring-boot:run`. To use another port: `SERVER_PORT=8081 java -jar target/matriz-0.1.0-SNAPSHOT.jar`.
+Or, without building the JAR first: `./mvnw spring-boot:run`. To use another port: `SERVER_PORT=8081 java -jar target/matriz.jar`.
 
 At start-up the application:
 - **creates or updates the schema** with the Flyway migrations in `src/main/resources/db/migration/<module>`. Nothing has to be created by hand, and existing data is never changed by a migration;
@@ -254,11 +255,11 @@ scripts/image-smoke-test.sh
 
 **Stop.** `docker compose --profile app down` stops both containers and keeps the data; `-v` would delete it.
 
-**The published image.** Each release is published to the GitHub Container Registry by CI, as `ghcr.io/vitorhsbarros/matriz:<version>` (and `latest` for the newest final release). It is public and built for `linux/amd64`; on an arm64 machine Docker runs it under emulation, which is slower. To run it instead of a local build:
+**The published image.** Each release is published to the GitHub Container Registry by CI, as `ghcr.io/vitorhsbarros/matriz:<version>` (and `latest` for the newest final release). It is public and built for `linux/amd64`; on an arm64 machine Docker runs it under emulation, which is slower. Each image has a signed provenance attestation, which says which commit and workflow run built it: `gh attestation verify oci://ghcr.io/vitorhsbarros/matriz:1.1.1 -R vitorhsbarros/matriz` checks it. To run it instead of a local build:
 
 ```bash
-docker pull ghcr.io/vitorhsbarros/matriz:1.1.0
-docker tag ghcr.io/vitorhsbarros/matriz:1.1.0 matriz:local
+docker pull ghcr.io/vitorhsbarros/matriz:1.1.1
+docker tag ghcr.io/vitorhsbarros/matriz:1.1.1 matriz:local
 docker compose --profile app up -d --wait --no-build
 ```
 
