@@ -158,6 +158,23 @@ h2.one-line { font-size: calc(5.4 * var(--u)); white-space: nowrap; }
 .ribbon .arrow { text-align: center; }
 .tier .tag { margin-top: 0; }
 .ribbon .ribbon-name { margin-right: 0; }
+/* The solution on the two challenge slides, in a rounded frame, at the same place on both. */
+.solution { position: absolute; left: calc(6.5 * var(--u)); bottom: calc(5.5 * var(--u)); font-size: calc(2.4 * var(--u)); border: calc(0.25 * var(--u)) solid var(--done); border-radius: 999px; padding: calc(0.9 * var(--u)) calc(2.2 * var(--u)); background: var(--surface); color: var(--ink); }
+.solution b { color: var(--done); font-weight: 600; }
+/* Every slide that opens with a kicker starts at the same height, so moving between slides doesn't jump. */
+.slide:has(> .kicker:first-child) { justify-content: flex-start; padding-top: calc(8 * var(--u)); }
+/* Slide 4's cards: equal widths; the label; the name alone; a rule at the
+   same height on all three, with the supporting parts as tags below it. The delivery ribbon sits at the bottom. */
+.tiers { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; }
+.tier { padding: calc(2.2 * var(--u)) calc(2.2 * var(--u)) calc(2.2 * var(--u)); gap: calc(1.2 * var(--u)); }
+.tier-head { display: flex; justify-content: space-between; align-items: center; }
+.tier b { font: 700 calc(3.6 * var(--u))/1 var(--font-display); white-space: nowrap; padding-bottom: calc(1.4 * var(--u)); border-bottom: calc(0.2 * var(--u)) solid var(--line); }
+.tier .ver { font: 600 calc(1.8 * var(--u))/1 var(--font-mono); color: var(--c); border: calc(0.22 * var(--u)) solid var(--c); border-radius: 999px; padding: calc(0.4 * var(--u)) calc(1 * var(--u)); }
+.tier .chips { display: flex; flex-wrap: wrap; gap: calc(0.6 * var(--u)); }
+.tier .chips span { font: 500 calc(1.7 * var(--u))/1 var(--font-ui); color: var(--ink); background: var(--platinum); border-radius: calc(0.5 * var(--u)); padding: calc(0.55 * var(--u)) calc(0.85 * var(--u)); white-space: nowrap; }
+.slide .ribbon { margin-top: auto; }
+/* Slide 7: the numbers start at the left margin, like the body of every other slide. */
+.two .numbers.stack .big-number { text-align: left; min-width: calc(6.5 * var(--u)); }
 </style>
 </head>
 <body>
@@ -221,26 +238,33 @@ h2.one-line { font-size: calc(5.4 * var(--u)); white-space: nowrap; }
     <div class="tiers">
       <div class="tier" style="--c: var(--todo)">
         <span class="tier-name">Frontend</span>
-        <b>React 19</b><span class="tag">TypeScript<br>Vite</span>
+        <b>React</b>
+        <span class="chips"><span>TypeScript</span><span>Vite</span></span>
       </div>
       <span class="wire"><span class="wire-label">JSON<br>HTTPS</span></span>
       <div class="tier" style="--c: var(--progress)">
         <span class="tier-name">Backend</span>
-        <b>Spring Boot 4</b><span class="tag">Java 21<br>Security · Modulith</span>
+        <b>Spring Boot</b>
+        <span class="chips"><span>Java 21</span><span>Security</span><span>Modulith</span></span>
       </div>
       <span class="wire"><span class="wire-label">JDBC</span></span>
       <div class="tier" style="--c: var(--done)">
         <span class="tier-name">Database</span>
-        <b>PostgreSQL 17</b><span class="tag">Flyway<br>migrações por módulo</span>
+        <b>PostgreSQL</b>
+        <span class="chips"><span>Flyway</span><span>migrações</span></span>
       </div>
     </div>
     <div class="ribbon">
       <span class="ribbon-name">Entrega</span>
-      <span class="hop">Docker</span><span class="arrow">→</span><span class="hop">GitHub Actions</span><span class="arrow">→</span><span class="hop">ghcr.io</span><span class="arrow">→</span><span class="hop">Render</span>
+      <span class="hop">Dockerfile</span><span class="arrow">→</span><span class="hop">GitHub Actions</span><span class="arrow">→</span><span class="hop">ghcr.io</span><span class="arrow">→</span><span class="hop">Render</span>
     </div>
     <aside>
-      <p>Um monólito modular: uma aplicação, uma base de dados, quatro módulos de negócio, com fronteiras verificadas pelo ModularityTest (Spring Modulith) em cada build (ADR-0001). O React vai dentro do mesmo JAR, servido pelo Spring Boot. Sessões no servidor com cookie Secure/HttpOnly e token CSRF (ADR-0002). Esquema da base de dados por migrações Flyway, uma pasta por módulo.</p>
-      <p>Entrega: imagem Docker multi-stage, sem root; o GitHub Actions corre testes, SAST, SCA, scan e teste da imagem, e numa release publica-a no ghcr.io com atestação; o Render corre essa imagem com PostgreSQL (PD13).</p>
+      <p>Um monólito modular: uma aplicação, uma base de dados, quatro módulos de negócio, com fronteiras verificadas pelo ModularityTest (Spring Modulith) em cada build (ADR-0001). Os quatro módulos: Accounts (contas, sessão e log-in), Projects (projetos e membros), Teams (equipas e os seus membros) e Tasks (tarefas, atribuições, comentários e as contagens do dashboard). O Projects e o Teams dependem do Accounts, e o Tasks depende do Projects e do Teams, sempre num só sentido. Há ainda o web, a entrada partilhada (segurança e erros), que não é um módulo de negócio. O React vai dentro do mesmo JAR, servido pelo Spring Boot. Sessões no servidor com cookie Secure/HttpOnly e token CSRF (ADR-0002). Esquema da base de dados por migrações Flyway, uma pasta por módulo.</p>
+      <p><b>Entrega, o fluxo:</b></p>
+      <p>1. <b>Dockerfile, a receita.</b> O Dockerfile diz como construir a imagem, em duas fases: a primeira compila o JAR (Maven e Node, com o frontend lá dentro); a segunda fica só com o Java 21 e o JAR, sem root. A imagem de produção é construída a partir dele só no GitHub Actions; localmente pode construir-se uma para testar (matriz:local), que nunca é publicada.</p>
+      <p>2. <b>GitHub Actions, em cada push e pull request.</b> Primeiro, em paralelo: os 279 testes (./mvnw verify), a análise do código (Semgrep e CodeQL) e das dependências (OSV-Scanner). Só se tudo passar: constrói a imagem (o único sítio onde a imagem de produção é construída), procura vulnerabilidades com correção, arranca-a com Docker Compose e corre o teste de fumo (12 verificações).</p>
+      <p>3. <b>ghcr.io, só quando publico uma release.</b> O job publish envia essa mesma imagem, sem a reconstruir, com as etiquetas da versão, do commit e latest, e uma atestação assinada de que commit e execução a produziram.</p>
+      <p>4. <b>Render.</b> O render.yaml descreve o serviço, que puxa e corre a imagem da versão publicada (hoje 1.2.0), sem construir nada, e um PostgreSQL. HTTPS, health check na readiness, segredos no painel do Render. Uma versão nova entra mudando a etiqueta no render.yaml ou com um deploy manual.</p>
       <p>Versões: React 19.3, TypeScript 5.9, Vite 8.3, Spring Boot 4.1.2, Java 21, Spring Security 7.1, Spring Modulith 2.1.2, PostgreSQL 17.10, Flyway 12.4. Fontes: README.md ("Technologies"), docs/architecture.md §1 e §5, docs/constraints.md (PD13).</p>
     </aside>
   </section>
@@ -270,13 +294,14 @@ h2.one-line { font-size: calc(5.4 * var(--u)); white-space: nowrap; }
     <aside>
       <p>Cada etapa começou com um prompt construído com a skill /prompt-builder: uma secção de cada vez (Role, Goal, Context, Constraints, Task, Validation), refinada comigo, em inglês, guardada em docs/prompts/ antes de correr. Estão lá 39 prompts; 27 têm exatamente estas seis secções.</p>
       <p>O AGENTS.md dá a todos os agentes as mesmas regras: fontes de verdade, não inventar, plano antes de mudanças grandes, aprovação antes de publicar. Cada resultado fica com evidência em docs/verification.md.</p>
+      <p><b>Os documentos que guiaram a IA.</b> O AGENTS.md é o contrato com os agentes: fontes de verdade (histórias, critérios de aceitação, restrições, ADR), não inventar, não tomar decisões pendentes, plano antes de mudanças grandes, aprovação antes de publicar, segredos fora do repositório, e um relatório no fim de cada tarefa. A arquitetura (Lab 02) ficou num Architecture Pack: modelo de domínio, três alternativas comparadas, a solução, e duas ADR (monólito modular, sessões com cookie). O plano de implementação analisou lacunas e contradições, listou as decisões pendentes e dividiu o MVP em sete incrementos (I0 a I6), cada um com as suas histórias e dependências. O plano de testes (Lab 04) partiu dos requisitos, e não do código: 20 cenários (TP01 a TP20), cinco escolhidos como essenciais, e as lacunas da especificação registadas.</p>
       <p>Testes: 232 back-end + 46 browser + 1 end-to-end = 279, em ./mvnw verify e no CI. Releases: v1.0.0, v1.0.1, v1.1.0-rc.1, v1.1.0, v1.1.1, v1.2.0.</p>
       <p>Fontes: docs/prompts/, AGENTS.md, docs/verification.md §21, CHANGELOG.md.</p>
     </aside>
   </section>
 
   <!-- 6. Challenge: AI errors -->
-  <section class="slide" data-time="4:15–4:35">
+  <section class="slide challenge" data-time="4:15–4:35">
     <p class="kicker">Desafio 1 · Erros da IA</p>
     <h2>A IA também erra.</h2>
     <div class="cards three">
@@ -284,15 +309,17 @@ h2.one-line { font-size: calc(5.4 * var(--u)); white-space: nowrap; }
       <div class="card" style="--c: var(--high)"><b>Shell</b><span>dois argumentos lidos como um só</span></div>
       <div class="card" style="--c: var(--high)"><b>Teste</b><span>um caso fora da especificação</span></div>
     </div>
-    <p class="lead">Solução: exigir evidência antes de aceitar.</p>
+    <p class="lead solution"><b>Solução:</b> exigir evidência antes de aceitar.</p>
     <aside>
-      <p>Três erros reais, registados: o time-out escrito "5s", que o Hikari não aceita (só milissegundos), impediu o arranque e foi corrigido para 5000 (verification.md §20); uma verificação inválida porque a shell passou dois argumentos como um só (verification.md §12); um teste com um caso (um título só com um tab) que a especificação não suporta, removido (verification.md §10).</p>
-      <p>Todos foram apanhados pela evidência: o arranque falhado, a verificação repetida, a comparação com a especificação.</p>
+      <p><b>Hikari: um time-out inválido de 5s</b> (v1.1.1, verification.md §20). Com a base de dados em baixo, a readiness demorava 30 s a responder, o time-out por defeito do Hikari, a pool de ligações. A IA reduziu-o escrevendo connection-timeout: 5s no application.yaml. Mas esta propriedade é um número em milissegundos: o Spring não conseguiu converter "5s", a aplicação não arrancou e os testes falharam. Corrigido para 5000, antes do commit; depois, com a base de dados parada, a readiness respondeu 503 em 5 s.</p>
+      <p><b>Shell: dois argumentos lidos como um só</b> (Lab 04, verification.md §12). Para provar que -Dskip.e2e saltava só o teste end-to-end, a IA correu o Maven com as opções numa variável da shell. No zsh, uma variável não se divide em palavras, por isso duas opções chegaram como um único argumento; e a verificação levava também -DskipTests, que salta os testes sozinho. Parecia passar, mas não provava nada. A revisão de segurança apanhou-o; foi repetida com argumentos separados e sem -DskipTests, e a correção ficou registada.</p>
+      <p><b>Teste: um caso fora da especificação</b> (Lab 04, verification.md §10). Nos testes unitários da regra do título, a IA acrescentou um caso: um título só com um tab conta como vazio. O teste passava, mas a especificação (D01) só fala de espaços e não diz nada sobre tabs. Manter o teste fixaria um palpite como regra. Foi removido, e a dúvida ficou registada para a especificação.</p>
+      <p>Lição: um teste ou uma verificação a passar não chega. É preciso ver se testa a coisa certa, e se a regra vem da especificação.</p>
     </aside>
   </section>
 
   <!-- 6b. Challenge: the human in the loop -->
-  <section class="slide" data-time="4:35–4:50">
+  <section class="slide challenge" data-time="4:35–4:50">
     <p class="kicker">Desafio 2 · Carga cognitiva</p>
     <h2>A decisão é minha.</h2>
     <div class="two">
@@ -306,7 +333,7 @@ h2.one-line { font-size: calc(5.4 * var(--u)); white-space: nowrap; }
         <li style="--c: var(--done)">Aprovar antes de publicar</li>
       </ul>
     </div>
-    <p class="lead">Solução: delegar o rotineiro, decidir o essencial.</p>
+    <p class="lead solution"><b>Solução:</b> delegar o rotineiro, decidir o essencial.</p>
     <aside>
       <p>A carga cognitiva: a IA propõe muito, e cada aprovação pede atenção. Ficaram registadas 44 decisões e aprovações minhas em 12 documentos. E 13 decisões técnicas (PD01–PD13) que só eu podia tomar: 9 tomadas, como a stack (Java 21, Spring Boot, PostgreSQL, React), a sessão que termina após 30 minutos sem pedidos, as palavras-passe com BCrypt e a plataforma de deploy (Render); 4 em aberto, todas fora do MVP, como apagar contas ou limitar tentativas de log-in.</p>
       <p>Para não bloquear nem perder o controlo: o agente apresenta opções com uma recomendação (AGENTS.md §3), um plano antes de mudanças grandes (§4) e pede aprovação antes de push, releases ou publicação (§6). Eu decido o essencial; o rotineiro segue a recomendação.</p>
