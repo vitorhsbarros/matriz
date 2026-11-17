@@ -339,7 +339,6 @@ h2.one-line { font-size: calc(5.4 * var(--u)); white-space: nowrap; }
   const count = document.getElementById("count");
   const timerEl = document.getElementById("timer");
   let index = 0, started = null, presenter = null;
-  const channel = "BroadcastChannel" in window ? new BroadcastChannel("matriz-presentation") : null;
 
   const fromHash = () => { const n = parseInt(location.hash.slice(1), 10); return Number.isInteger(n) && n >= 1 && n <= slides.length ? n - 1 : 0; };
   const elapsed = () => started === null ? 0 : Math.floor((Date.now() - started) / 1000);
@@ -354,55 +353,76 @@ h2.one-line { font-size: calc(5.4 * var(--u)); white-space: nowrap; }
     document.getElementById("notes-title").textContent = `${index + 1}. ${slides[index].dataset.time}`;
     document.getElementById("notes-body").innerHTML = notesHtml(index);
     if (location.hash !== `#${index + 1}`) history.replaceState(null, "", `#${index + 1}`);
-    broadcast();
-  }
-  function broadcast() {
-    if (!channel) return;
-    channel.postMessage({ index, total: slides.length, time: slides[index].dataset.time, notes: notesHtml(index),
-      next: index + 1 < slides.length ? title(index + 1) : "—", elapsed: elapsed() });
+    updatePresenter();
   }
   function tick() {
     const s = elapsed();
     timerEl.textContent = clock(s);
     timerEl.classList.toggle("warn", s >= WARN && s < LIMIT);
     timerEl.classList.toggle("over", s >= LIMIT);
-    broadcast();
+    updatePresenter();
   }
-  function next() { if (started === null) started = Date.now(); show(index + 1); }
+  function next() { if (started === null) started = Date.now(); show(index + 1); tick(); }
   function back() { show(index - 1); }
+
+  // The presenter window: opened from this page, so it shares its origin and this page writes into it
+  // directly. No messaging between windows, which browsers don't allow for pages opened from a file.
   function openPresenter() {
-    presenter = window.open("", "matriz-presenter", "width=720,height=520");
-    if (!presenter) return;
-    presenter.document.write(`<!doctype html><meta charset="utf-8"><title>Notas — Matriz</title>
-      <style>body{font:16px/1.5 "IBM Plex Sans",Arial,sans-serif;background:#1d1b18;color:#f3eee3;margin:0;padding:20px}
-      #t{font:600 44px/1 ui-monospace,Menlo,monospace}#t.warn{color:#e08a3c}#t.over{color:#e35d55}
-      .meta{color:#c9c1b0;margin:8px 0 14px}#n p{margin:0 0 10px}</style>
-      <div id="t">0:00</div><div class="meta" id="m"></div><div id="n"></div>
-      <script>const c=new BroadcastChannel("matriz-presentation");const f=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
-      c.onmessage=e=>{const d=e.data;const t=document.getElementById("t");t.textContent=f(d.elapsed);
-      t.className=d.elapsed>=300?"over":d.elapsed>=240?"warn":"";
-      document.getElementById("m").textContent="Diapositivo "+(d.index+1)+"/"+d.total+" · "+d.time+" · a seguir: "+d.next;
-      document.getElementById("n").innerHTML=d.notes;};<\/script>`);
-    presenter.document.close();
-    broadcast();
+    if (presenter && !presenter.closed) { presenter.focus(); updatePresenter(); return; }
+    presenter = window.open("", "matriz-presenter", "width=760,height=560");
+    if (!presenter) { notes.classList.add("open"); return; }   // Pop-up blocked: show the notes here instead.
+    const d = presenter.document;
+    d.open();
+    d.write(`<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><title>Notas — Matriz</title>
+      <style>
+        body { font: 17px/1.5 "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; background: #1d1b18; color: #f3eee3; margin: 0; padding: 22px 26px; }
+        header { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+        #t { font: 600 46px/1 ui-monospace, Menlo, monospace; }
+        #t.warn { color: #e08a3c; } #t.over { color: #e35d55; }
+        #m { color: #c9c1b0; }
+        #now { font: 600 22px/1.25 "EB Garamond", Georgia, serif; margin: 16px 0 6px; }
+        #n p { margin: 0 0 10px; }
+        footer { color: #8f8676; font-size: 13px; margin-top: 16px; }
+      </style></head><body>
+      <header><div id="t">0:00</div><div id="m"></div></header>
+      <div id="now"></div><div id="n"></div>
+      <footer>← → espaço: mudar de diapositivo · T: reiniciar o cronómetro</footer>
+      </body></html>`);
+    d.close();
+    // Keys pressed in this window drive the slides too.
+    d.addEventListener("keydown", (e) => onKey(e, true));
+    updatePresenter();
+  }
+  function updatePresenter() {
+    if (!presenter || presenter.closed) return;
+    const d = presenter.document, s = elapsed(), t = d.getElementById("t");
+    if (!t) return;
+    t.textContent = clock(s);
+    t.className = s >= LIMIT ? "over" : s >= WARN ? "warn" : "";
+    d.getElementById("m").textContent = `Diapositivo ${index + 1}/${slides.length} · ${slides[index].dataset.time} · a seguir: ${index + 1 < slides.length ? title(index + 1) : "—"}`;
+    d.getElementById("now").textContent = title(index);
+    d.getElementById("n").innerHTML = notesHtml(index);
   }
 
-  document.addEventListener("keydown", (e) => {
+  function onKey(e, fromPresenter) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     switch (e.key) {
       case "ArrowRight": case "PageDown": case " ": case "Enter": e.preventDefault(); next(); break;
       case "ArrowLeft": case "PageUp": case "Backspace": e.preventDefault(); back(); break;
       case "Home": show(0); break;
       case "End": show(slides.length - 1); break;
-      case "n": case "N": notes.classList.toggle("open"); break;
-      case "p": case "P": openPresenter(); break;
       case "t": case "T": started = null; tick(); break;
+      case "n": case "N": if (!fromPresenter) notes.classList.toggle("open"); break;
+      case "p": case "P": if (!fromPresenter) openPresenter(); break;
       case "f": case "F":
+        if (fromPresenter) break;   // Full screen needs a key pressed on the slides themselves.
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         else document.documentElement.requestFullscreen().catch(() => {});
         break;
     }
-  });
+  }
+  document.addEventListener("keydown", (e) => onKey(e, false));
+  window.addEventListener("beforeunload", () => { if (presenter && !presenter.closed) presenter.close(); });
   document.getElementById("stage").addEventListener("click", (e) => { if (!e.target.closest("a")) next(); });
   window.addEventListener("hashchange", () => show(fromHash()));
   setInterval(tick, 1000);
